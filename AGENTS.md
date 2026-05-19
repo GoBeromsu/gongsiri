@@ -31,9 +31,6 @@ gongsiri/
 ├── AGENTS.md / CLAUDE.md / README.md
 ```
 
-> 보호 3중 차단: ① Claude hook(`.claude/hooks/`) ② lefthook pre-push ③ GitHub branch protection (`scripts/setup-branch-protection.sh`).
-> `.claude/` 디렉토리는 **commit 대상** (팀 공유 hook·skill), `.omc/`·`.omx/`·`.venv/`·`.ruff_cache/`·`lefthook-local.yml`은 **로컬 전용**.
-
 ## 사람 담당 (A / B / C)
 
 | 담당 | 영역 | 코드 경로 | 핵심 산출 |
