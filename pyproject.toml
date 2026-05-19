@@ -21,8 +21,3 @@ exclude = [
 [tool.ruff.lint]
 # Conservative default — keep CI light. Tighten per-PR as the codebase grows.
 select = ["E", "F", "W", "I"]
-ignore = []
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"

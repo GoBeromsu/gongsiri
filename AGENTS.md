@@ -68,15 +68,14 @@ DART, KRX, 네이버 뉴스  →  normalized_data_bundle  →  analysis_result  
 
 ## 작업 규칙 (요약)
 
-1. **항상 `docs/`를 먼저 읽고 코드를 짠다.** 인터페이스·스키마·기능 ID는 `docs/`가 진실의 출처.
-2. **기획서 원본**: `assets/공시리 기획서.pdf` (docs와 충돌 시 우선).
-3. **브랜치**: `feature/<owner>-<scope>` (예: `feature/A-collector-dart`, `feature/B-solar-step1`, `feature/C-scheduler`). PR 타겟은 항상 `dev`.
-4. **main·dev 직접 push 금지** — `.claude/settings.json` PreToolUse hook + lefthook pre-push + GitHub branch protection 3중 차단.
-5. **commit**: Conventional Commits (`<type>(<scope>): <summary>`). 7 types: `feat | fix | docs | chore | refactor | test | style`. `/commit` Claude skill 사용 권장.
-6. **인터페이스 변경**: A↔B↔C 스키마 수정은 PR + 팀 합의 + `docs/03-interface-schema.md` 갱신 필수.
-7. **환경변수**: 새 키 추가 시 `.env.example` + `docs/04-env-vars.md` 동시 갱신.
-8. **언어**: 본문·코멘트·커밋 메시지 한국어 OK, 코드·식별자는 영문.
-9. **lint**: pre-commit이 변경 파일만 검사 (`*.py`→ruff, `*.{js,ts,jsx,tsx}`→eslint). `lefthook install` 한 번만 실행하면 자동.
+1. **항상 `docs/`를 먼저 읽고 코드를 짠다** — 인터페이스·스키마·기능 ID 모두 `docs/`가 SoT. 모호 시 `assets/공시리 기획서.pdf`.
+2. **브랜치**: `feature/<owner>-<scope>` (예: `feature/A-collector-dart`). PR 타겟은 항상 `dev`.
+3. **main·dev 직접 push 금지** — Claude PreToolUse hook + lefthook pre-push + GitHub branch protection 3중 차단.
+4. **commit**: `/commit` 스킬 사용 권장. Conventional Commits `<type>(<scope>): <summary>`, 7 types: `feat | fix | docs | chore | refactor | test | style`.
+5. **인터페이스 변경**: A↔B↔C 스키마 수정은 PR + 팀 합의 + `docs/03-interface-schema.md` 갱신 필수.
+6. **환경변수**: 새 키 추가 시 `.env.example` + `docs/04-env-vars.md` 동시 갱신.
+7. **언어**: 본문·코멘트·커밋 메시지 한국어 OK, 코드·식별자는 영문.
+8. **lint**: `lefthook install` 한 번으로 자동 활성화. pre-commit이 변경 파일만 검사 (`*.py`→ruff, `*.{js,ts,jsx,tsx}`→eslint).
 
 ## 새 기능 추가 워크플로
 
@@ -87,7 +86,7 @@ DART, KRX, 네이버 뉴스  →  normalized_data_bundle  →  analysis_result  
 5. 코드 작성·테스트
 6. `/commit` 스킬로 커밋 (스킬이 자동으로 type/scope 분석)
 7. `git push -u origin feature/<owner>-<scope>` → GitHub PR (base=dev)
-8. 팀원 1명 이상 리뷰 → dev 머지
+8. 리뷰 권장 (개발 속도를 위해 GitHub 차원의 review-required는 끔). 큰 변경·인터페이스 수정은 1명 이상 리뷰 후 머지.
 9. `dev → main`은 데모 전날/배포 직전에만
 
 ## 빠른 명령
@@ -116,7 +115,3 @@ bash scripts/setup-branch-protection.sh
 - 비상장사·코인·해외주식
 - 소셜 기능
 - "작전주 사전 탐지" 절대적 주장 (포지셔닝: "공시 기반 위험 점검")
-
-## Disclaimer (모든 리포트 하단)
-
-> 이 리포트는 DART 공시·재무 기반 도메인 시그널만 분석하며, 차트·거래량·뉴스·루머는 포함하지 않습니다. 투자 자문이 아닙니다.

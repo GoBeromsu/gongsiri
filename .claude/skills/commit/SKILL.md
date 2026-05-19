@@ -53,8 +53,7 @@ Stage relevant changes, write a Conventional Commit message, and execute `git co
    - **본문 (선택)**: 빈 줄 후 wrap 72, 변경 이유·맥락. 한국어 OK.
 
 5. **커밋 메시지 후보 제시 → 사용자 확인**:
-   - 후보 메시지 출력하고, 사용자가 그대로 OK 할지 수정할지 묻거나 `git commit -m` 으로 바로 실행.
-   - 이 스킬은 **메시지만 출력하고 끝내지 않음** — `git commit` 까지 실행하는 것이 본 스킬의 정의.
+   - 후보 메시지를 출력하고 OK 여부를 확인한 뒤 `git commit -m` 으로 실행. 메시지만 출력하고 끝내지 않는다.
 
 6. **`git commit` 실행**:
    - `git commit -m "<type>(<scope>): <summary>"` (단행) 또는 본문 필요 시 HEREDOC.

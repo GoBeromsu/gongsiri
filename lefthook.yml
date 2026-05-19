@@ -1,10 +1,6 @@
 # lefthook - gongsiri git hooks.
-# Install once after clone:  lefthook install
-# Bypass (emergency only):   git commit --no-verify  /  git push --no-verify
-#
-# Policy:
-#   pre-commit lint is diff-scoped: only the languages touched are linted.
-#   pre-push refuses pushes from main/dev (PR convention).
+# Install once after clone: lefthook install
+# Bypass (emergency only):  git commit --no-verify  /  git push --no-verify
 
 pre-commit:
   parallel: true
@@ -19,7 +15,7 @@ pre-commit:
         if [ -f frontend/package.json ] && [ -d frontend/node_modules ]; then
           cd frontend && pnpm exec eslint --fix {staged_files}
         else
-          echo "lefthook: skipping eslint (frontend not initialized yet)"
+          echo "lefthook: eslint skipped (frontend not initialized)"
         fi
       stage_fixed: true
 
