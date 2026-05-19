@@ -3,6 +3,37 @@
 > 공시리 = 관심종목 공시를 자동 모니터링하고 작전주 6개 항목을 판별해 경고/리포트를 보내는 개인 주식 AI 에이전트.
 > 작업 전 반드시 `docs/`를 먼저 읽는다 (인터페이스·스키마·기능 ID 모두 `docs/`가 SoT, 모호 시 `assets/공시리 기획서.pdf`).
 
+## Repo 1depth 구조
+
+```
+gongsiri/
+├── frontend/                      # Next.js (C 담당) — 아직 .gitkeep + README
+├── backend/                       # FastAPI
+│   ├── collector/                 # A: dart.py, dart_parser.py, document_parse.py,
+│   │                              #    normalize.py, krx/{client,search,trade_info}.py,
+│   │                              #    naver/news.py
+│   ├── schemas/bundle.py          # A↔B 공유 Pydantic
+│   ├── analyzer/                  # B (예정)
+│   ├── api/, agent/, db/          # C (예정)
+│   └── main.py                    # FastAPI 부트
+├── assets/                        # 기획서 PDF · 디자인 토큰 (C 담당)
+├── data/                          # 런타임 캐시·정적 데이터 (price_cache는 .gitignore)
+├── docs/                          # 01~05 설계 문서 (코드 전 필독)
+├── scripts/                       # setup-branch-protection.sh 등 운영 스크립트
+├── .claude/                       # 팀 공유 Claude Code 설정 (commit 추적 대상)
+│   ├── settings.json              # PreToolUse hook + permissions.ask (rm -rf 등)
+│   ├── hooks/guard-protected-branch.sh   # main/dev에서 commit/push/merge 차단
+│   └── skills/commit/SKILL.md     # /commit — Conventional Commit 7 types
+├── lefthook.yml                   # pre-commit 변경파일 lint + pre-push 보호브랜치 차단
+├── pyproject.toml                 # ruff 설정 (line=100, target=py311)
+├── .gitignore                     # .omc/ .omx/ node_modules/ .next/ .env 등 제외
+├── .env.example
+├── AGENTS.md / CLAUDE.md / README.md
+```
+
+> 보호 3중 차단: ① Claude hook(`.claude/hooks/`) ② lefthook pre-push ③ GitHub branch protection (`scripts/setup-branch-protection.sh`).
+> `.claude/` 디렉토리는 **commit 대상** (팀 공유 hook·skill), `.omc/`·`.omx/`·`.venv/`·`.ruff_cache/`·`lefthook-local.yml`은 **로컬 전용**.
+
 ## 사람 담당 (A / B / C)
 
 | 담당 | 영역 | 코드 경로 | 핵심 산출 |
