@@ -27,19 +27,27 @@ echo "applying branch protection to: $repo"
 protect() {
     local branch=$1
     echo "  → $branch"
+    # GitHub's protection PUT requires nested JSON; gh's -F flattens dotted
+    # keys into form fields and is rejected with HTTP 422. Pipe a proper
+    # JSON body via stdin instead.
     gh api -X PUT "repos/$repo/branches/$branch/protection" \
         -H "Accept: application/vnd.github+json" \
-        -F required_status_checks=null \
-        -F enforce_admins=false \
-        -F required_pull_request_reviews.required_approving_review_count=1 \
-        -F required_pull_request_reviews.dismiss_stale_reviews=false \
-        -F required_pull_request_reviews.require_code_owner_reviews=false \
-        -F restrictions=null \
-        -F allow_force_pushes=false \
-        -F allow_deletions=false \
-        -F required_linear_history=false \
-        -F required_conversation_resolution=false \
-        > /dev/null
+        --input - > /dev/null <<'JSON'
+{
+  "required_status_checks": null,
+  "enforce_admins": false,
+  "required_pull_request_reviews": {
+    "required_approving_review_count": 1,
+    "dismiss_stale_reviews": false,
+    "require_code_owner_reviews": false
+  },
+  "restrictions": null,
+  "allow_force_pushes": false,
+  "allow_deletions": false,
+  "required_linear_history": false,
+  "required_conversation_resolution": false
+}
+JSON
 }
 
 protect main
