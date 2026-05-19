@@ -11,7 +11,6 @@ gongsiri/
 ├── backend/                  # FastAPI 단일 서비스 (api/agent/db = C, collector = A, analyzer = B, schemas = 공유)
 ├── assets/                   # 정적 자산 — 기획서 PDF, 디자인 토큰, stock_master.json, dart_debug_main.html
 ├── docs/                     # 설계 문서 (01~05) — 코드 작성 전 필독
-├── scripts/                  # 운영 스크립트 (setup-branch-protection.sh 등)
 ├── .claude/                  # 팀 공유 Claude Code 설정 (hooks, /commit skill)
 ├── lefthook.yml              # pre-commit 변경파일 lint + pre-push 보호브랜치 차단
 ├── pyproject.toml            # ruff 설정
@@ -95,9 +94,6 @@ cd frontend && pnpm test
 
 # git hook 활성화 (clone 직후 1회)
 lefthook install
-
-# branch protection 적용 (운영자 1회)
-bash scripts/setup-branch-protection.sh
 ```
 
 ## Out of scope
