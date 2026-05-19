@@ -1,0 +1,6 @@
+venv/
+__pycache__/
+*.pyc
+.env
+data/normalized_data_bundle.json
+data/reports/

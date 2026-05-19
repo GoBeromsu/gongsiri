@@ -1,0 +1,20 @@
+{
+  "카카오": {
+    "corp_name": "카카오",
+    "stock_code": "035720",
+    "corp_code": "00258801",
+    "market": "KOSPI"
+  },
+  "삼성전자": {
+    "corp_name": "삼성전자",
+    "stock_code": "005930",
+    "corp_code": "00126380",
+    "market": "KOSPI"
+  },
+  "네이버": {
+    "corp_name": "NAVER",
+    "stock_code": "035420",
+    "corp_code": "00266961",
+    "market": "KOSPI"
+  }
+}
