@@ -10,7 +10,8 @@ set -euo pipefail
 
 PROTECTED_RE='^(main|dev)$'
 
-cmd=$(python3 - <<'PY' 2>/dev/null || true
+payload=$(cat)
+cmd=$(printf '%s' "$payload" | python3 -c '
 import json, sys
 try:
     data = json.load(sys.stdin)
@@ -19,14 +20,16 @@ except Exception:
     sys.exit(0)
 ti = data.get("tool_input") or {}
 print(ti.get("command", ""))
-PY
-)
+' 2>/dev/null || true)
 
 # Only act on git mutation commands we want to gate.
 case "$cmd" in
     *"git commit"*|*"git push"*|*"git merge"*|*"git rebase"*)
-        # detect repo root from cwd; bail silently if not in a repo
-        if ! branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null); then
+        # Test override: lets the acceptance demo prove behavior without
+        # actually checking out main/dev. Production callers never set this.
+        if [[ -n "${GUARD_BRANCH_OVERRIDE:-}" ]]; then
+            branch="$GUARD_BRANCH_OVERRIDE"
+        elif ! branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null); then
             exit 0
         fi
         if [[ "$branch" =~ $PROTECTED_RE ]]; then
