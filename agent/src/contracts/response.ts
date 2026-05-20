@@ -1,4 +1,4 @@
-import type { ContractVersion } from "./request.js";
+import type { ContractVersion, TriggerSource } from "./request.js";
 import type { ToolEvidence } from "./evidence.js";
 import type { ToolError } from "./error.js";
 
@@ -50,3 +50,33 @@ export type AgentResponse = {
   contractVersion: ContractVersion;
   result: ToolResult;
 };
+
+export type TriggerCheckpoint = {
+  checkpointPath: string;
+  previousLastSeen: string | null;
+  currentLastSeen: string | null;
+};
+
+type TriggerResultShared = {
+  triggerSource: TriggerSource;
+  traceId: string;
+  contractVersion: ContractVersion;
+  hasNewDisclosure: boolean;
+  newDisclosureCount: number;
+  newDisclosureIds: string[];
+  checkpoint: TriggerCheckpoint;
+};
+
+export type TriggeredDisclosureSuccess = TriggerResultShared & {
+  ok: true;
+  result: ToolResultSuccess;
+};
+
+export type TriggeredDisclosureFailure = TriggerResultShared & {
+  ok: false;
+  result: ToolResultFailure;
+};
+
+export type TriggeredDisclosureResult =
+  | TriggeredDisclosureSuccess
+  | TriggeredDisclosureFailure;
