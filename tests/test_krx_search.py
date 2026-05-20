@@ -35,7 +35,7 @@ class KRXSearchTests(unittest.TestCase):
         self.assertIsNotNone(partial)
         self.assertEqual(partial.corp_name, "카카오")
 
-    def test_resolve_stock_readonly_does_not_mutate_stock_master(self) -> None:
+    def test_resolve_company_read_only_does_not_mutate_stock_master(self) -> None:
         baseline = self.read_master()
         remote_result = CompanyInfo(
             corp_name="테스트주식",
@@ -50,7 +50,7 @@ class KRXSearchTests(unittest.TestCase):
             patch.object(search, "search_stock_from_kskill", return_value=remote_result),
             patch.object(search, "save_company_to_master") as save_mock,
         ):
-            resolved = search.resolve_stock("테스트주식", persist_result=False)
+            resolved = search.resolve_company_read_only("테스트주식")
 
         self.assertEqual(resolved, remote_result)
         self.assertEqual(search.SEARCH_CACHE["테스트주식"], remote_result)
@@ -75,4 +75,3 @@ class KRXSearchTests(unittest.TestCase):
         self.assertEqual(resolved, remote_result)
         self.assertIn("새종목", self.read_master())
         self.assertEqual(self.read_master()["새종목"]["corp_code"], "00009999")
-

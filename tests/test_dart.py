@@ -12,7 +12,7 @@ class DartCollectorTests(unittest.TestCase):
         self.assertEqual(dart.classify_disclosure("기타 공시"), "other")
 
     def test_fetch_disclosures_requires_dart_api_key(self) -> None:
-        with patch.object(dart, "DART_API_KEY", None):
+        with patch.object(dart, "get_dart_api_key", return_value=None):
             with self.assertRaisesRegex(ValueError, "DART_API_KEY"):
                 dart.fetch_disclosures("00126380")
 
@@ -31,7 +31,7 @@ class DartCollectorTests(unittest.TestCase):
         }
 
         with (
-            patch.object(dart, "DART_API_KEY", "test-key"),
+            patch.object(dart, "get_dart_api_key", return_value="test-key"),
             patch.object(dart.requests, "get", return_value=response) as get_mock,
         ):
             disclosures = dart.fetch_disclosures("00126380", bgn_de="20250101", end_de="20250131")
@@ -50,7 +50,7 @@ class DartCollectorTests(unittest.TestCase):
         response.json.return_value = {"status": "013", "message": "No data"}
 
         with (
-            patch.object(dart, "DART_API_KEY", "test-key"),
+            patch.object(dart, "get_dart_api_key", return_value="test-key"),
             patch.object(dart.requests, "get", return_value=response),
         ):
             with self.assertRaisesRegex(RuntimeError, "OpenDART API error"):
