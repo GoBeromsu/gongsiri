@@ -2,8 +2,13 @@ import { PiDisclosureAgent } from "./agents/PiDisclosureAgent.js";
 import type { PromptRequest } from "./contracts/request.js";
 import type { ToolDefinition } from "./contracts/tool.js";
 import { normalizeManualPrompt } from "./prompt/manualPrompt.js";
+import { createDisclosureScheduler } from "./scheduler/disclosureScheduler.js";
 import { createSessionContext } from "./session/session.js";
 import { fetchDisclosuresTool } from "./tools/fetchDisclosures.js";
+import {
+  createDisclosureTriggerRequest,
+  runTriggeredDisclosureCheck
+} from "./triggers/disclosureTrigger.js";
 
 export type RuntimeSkeleton = {
   entry: "agent/src/index.ts";
@@ -54,3 +59,5 @@ export const runManualPrompt = async (
     contractVersion: runtime.session.contractVersion
   });
 };
+
+export { createDisclosureScheduler, createDisclosureTriggerRequest, runTriggeredDisclosureCheck };

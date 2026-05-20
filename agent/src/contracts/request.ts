@@ -1,4 +1,5 @@
 export type ContractVersion = "v1";
+export type TriggerSource = "user" | "system" | "cron";
 
 type SharedFetchDisclosuresFields = {
   bgnDe?: string;
@@ -26,4 +27,24 @@ export type PromptRequest = {
   text: string;
   traceId?: string;
   contractVersion?: ContractVersion;
+};
+
+export type TriggerMetadata = {
+  intervalMinutes?: number;
+  runReason?: string;
+};
+
+export type DisclosureTriggerRequest = FetchDisclosuresRequest & {
+  source: TriggerSource;
+  metadata?: TriggerMetadata;
+};
+
+export type DisclosureTriggerInput = {
+  source: TriggerSource;
+  keyword?: string;
+  corpCode?: string;
+  traceId?: string;
+  contractVersion?: ContractVersion;
+  intervalMinutes?: number;
+  runReason?: string;
 };
