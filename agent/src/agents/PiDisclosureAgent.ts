@@ -2,6 +2,7 @@ import type { PromptRequest } from "../contracts/request.js";
 import type { ToolDefinition } from "../contracts/tool.js";
 import type { AgentResponse } from "../contracts/response.js";
 import {
+  buildDisclosureRequest,
   DISCLOSURE_INTAKE_SKILL,
   selectDisclosureIntakeSkill
 } from "../skills/disclosureIntakeSkill.js";
@@ -18,18 +19,29 @@ export class PiDisclosureAgent {
 
   async run(prompt: PromptRequest): Promise<AgentResponse> {
     const selection = selectDisclosureIntakeSkill();
-    const result = await this.tool.invoke({
-      keyword: prompt.text,
-      traceId: prompt.traceId,
-      contractVersion: prompt.contractVersion ?? "v1"
-    });
+    const traceId = prompt.traceId ?? "pi-bootstrap-trace";
+    const contractVersion = prompt.contractVersion ?? "v1";
+
+    const result = await this.tool
+      .invoke(buildDisclosureRequest({ ...prompt, traceId, contractVersion }))
+      .catch((error: unknown) => ({
+        ok: false as const,
+        traceId,
+        contractVersion,
+        observedAt: new Date().toISOString(),
+        error: {
+          code: "invalid_request" as const,
+          message: error instanceof Error ? error.message : "알 수 없는 요청 오류가 발생했습니다."
+        },
+        evidence: [] as []
+      }));
 
     return {
       agent: this.name,
       skill: DISCLOSURE_INTAKE_SKILL,
       tool: selection.tool,
-      traceId: result.traceId,
-      contractVersion: result.contractVersion,
+      traceId,
+      contractVersion,
       result
     };
   }

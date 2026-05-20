@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import UTC, datetime
 from typing import Any
 
 from backend.collector.bridge.disclosures import (
@@ -62,11 +63,41 @@ def _load_request(args: argparse.Namespace) -> dict[str, Any]:
     return payload
 
 
+def _observed_at() -> str:
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
+
+
+def _invalid_request_response(trace_id: str, message: str) -> dict[str, Any]:
+    return {
+        "ok": False,
+        "traceId": trace_id,
+        "contractVersion": "v1",
+        "observedAt": _observed_at(),
+        "error": {
+            "code": "invalid_request",
+            "message": message,
+        },
+        "evidence": [],
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    request = _load_request(args)
-    response = run_fetch_disclosures_request(request, trace_id=args.trace_id)
+
+    try:
+        request = _load_request(args)
+    except InvalidRequestError as exc:
+        trace_id = args.trace_id or "invalid-request"
+        response = _invalid_request_response(trace_id, str(exc))
+        sys.stdout.write(json.dumps(response, ensure_ascii=False))
+        sys.stdout.write("\n")
+        return 1
+
+    response = run_fetch_disclosures_request(
+        request,
+        trace_id=args.trace_id or request.get("traceId"),
+    )
     sys.stdout.write(json.dumps(response, ensure_ascii=False))
     sys.stdout.write("\n")
     return 0 if response.get("ok") else 1
