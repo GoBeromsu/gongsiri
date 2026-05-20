@@ -180,7 +180,7 @@ def save_company_to_master(company: CompanyInfo) -> None:
     save_stock_master(stock_master)
 
 
-def search_stock(keyword: str) -> CompanyInfo:
+def resolve_stock(keyword: str, *, persist_result: bool) -> CompanyInfo:
     """
     종목명 입력 → CompanyInfo 반환.
 
@@ -188,7 +188,7 @@ def search_stock(keyword: str) -> CompanyInfo:
     1. 메모리 캐시
     2. assets/stock_master.json
     3. k-skill API
-    4. 성공 시 stock_master.json에 저장
+    4. 성공 시 필요할 때만 stock_master.json에 저장
     """
     keyword = normalize_keyword(keyword)
 
@@ -206,7 +206,8 @@ def search_stock(keyword: str) -> CompanyInfo:
     try:
         api_result = search_stock_from_kskill(keyword)
         SEARCH_CACHE[keyword] = api_result
-        save_company_to_master(api_result)
+        if persist_result:
+            save_company_to_master(api_result)
         return api_result
 
     except Exception as e:
@@ -214,3 +215,7 @@ def search_stock(keyword: str) -> CompanyInfo:
             f"종목 검색 실패: {keyword}. "
             f"로컬 stock_master에도 없고 k-skill 호출도 실패했습니다. 원인: {str(e)}"
         )
+
+
+def search_stock(keyword: str) -> CompanyInfo:
+    return resolve_stock(keyword, persist_result=True)
