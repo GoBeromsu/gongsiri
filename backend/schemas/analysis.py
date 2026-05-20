@@ -17,6 +17,7 @@ class ChecklistItem(BaseModel):
     score: int
     reason: str
     evidence: list[str] = Field(default_factory=list)
+    solar_explanation: str = ""
 
 
 class AnalysisResult(BaseModel):
