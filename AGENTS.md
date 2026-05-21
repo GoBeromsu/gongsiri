@@ -27,9 +27,9 @@ gongsiri/
 |------|------|----------|----------|
 | **A** | 수집·정규화 | `backend/collector/` (`dart.py`, `krx/`, `naver/`, `document_parse.py`, `normalize.py`) | `normalized_data_bundle` (A→B 인터페이스, `backend/schemas/bundle.py`) |
 | **B** | 분석·리포트 | `backend/analyzer/` (`checklist.py`, `solar_step1.py`, `solar_step2.py`, `qa.py`) | `analysis_result` (B→C 인터페이스: risk_score/level + 단기·장기 리포트) |
-| **C** | Pi 런타임·오케스트레이션 | `agent/` | manual prompt runtime, skill/tool orchestration, typed Pi envelopes |
+| **C** | Pi 런타임·오케스트레이션 | `agent/` | Pi SDK HTTP service, manual prompt runtime, skill/tool orchestration, typed Pi envelopes |
 
-> PR1(`feature/pi-agent-bootstrap`) 기준으로 C의 canonical runtime root는 `agent/`이다. `backend/main.py`는 기존 FastAPI surface로 남아 있으며, `frontend/`, cron, DB는 PR1 out-of-scope다.
+> PR23(`feature/C-pi-agent-demo`) 이후 C의 canonical runtime root는 `agent/`이고, report/QA 데모 경로는 `frontend → backend → agent(Pi SDK)` 순서로 호출된다. cron, DB 히스토리, 인증 고도화는 여전히 out-of-scope다.
 
 ## 작전주 6개 항목 owner 매핑
 
@@ -57,6 +57,36 @@ DART, KRX, 네이버 뉴스  →  normalized_data_bundle  →  analysis_result  
 ```
 
 자세한 필드: `docs/03-interface-schema.md`.
+
+## 로컬 서버 구동 메모
+
+> 자세한 아키텍처/계약은 `docs/03-interface-schema.md`, `docs/04-env-vars.md`, `docs/06-pi-agent-architecture.md`, `docs/07-pi-agent-contracts.md`가 SoT다. 여기에는 다음 세션의 agent가 바로 틀리기 쉬운 실행 메모만 둔다.
+
+- 데모 서버는 새 스크립트를 만들지 말고 **직접** 띄운다. 각 명령은 별도 터미널/tmux pane에서 실행.
+- 호출 방향은 `frontend(3000) → backend(8000) → agent(8787)`이다. 브라우저/프론트는 agent를 직접 호출하지 않는다.
+- `.env`는 로컬 전용이다. 최소 `UPSTAGE_API_KEY`, `DART_API_KEY`, `GONGSIRI_AGENT_URL=http://127.0.0.1:8787`, `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000`가 필요하다. 실제 키는 커밋 금지.
+- report/QA는 **strict Pi SDK-first**다. agent/Upstage 실패 시 Solar-only fallback을 만들지 않는다.
+- 사용자에게 보이는 agent 답변/오류 문구는 1인칭 `공시리` 톤을 유지한다.
+
+```bash
+# agent pane A: build watch (repo root에서 .env 로드 후 실행)
+set -a; source .env; set +a
+cd agent && npm run build -- --watch --preserveWatchOutput
+
+# agent pane B: server watch
+set -a; source .env; set +a
+cd agent && node --watch dist/server.js
+# health: curl http://127.0.0.1:8787/health
+
+# backend: 반드시 repo root에서 실행 (backend.main import 경로 유지)
+set -a; source .env; set +a
+uv run uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+# health: curl http://127.0.0.1:8000/
+
+# frontend
+cd frontend && npm run dev -- --hostname 127.0.0.1 --port 3000
+# demo: http://127.0.0.1:3000/qa , http://127.0.0.1:3000/report
+```
 
 ## 작업 규칙 (요약)
 
@@ -97,14 +127,17 @@ DART, KRX, 네이버 뉴스  →  normalized_data_bundle  →  analysis_result  
 ## 빠른 명령
 
 ```bash
-# Pi runtime dev
+# Pi runtime typecheck
 cd agent && npm run typecheck
 
-# Backend dev
-cd backend && uv run uvicorn main:app --reload
+# Agent server (after `npm run build -- --watch` in another pane)
+cd agent && node --watch dist/server.js
+
+# Backend dev (repo root)
+uv run uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
 
 # Frontend dev
-cd frontend && pnpm dev
+cd frontend && npm run dev -- --hostname 127.0.0.1 --port 3000
 
 # 테스트
 python3 -m unittest discover -s tests -v
