@@ -9,6 +9,8 @@ from backend.collector.normalize import (
     build_and_save_normalized_bundle,
     build_normalized_bundle,
 )
+
+
 def _typed_pipeline_failure(code: str, message: str, *, source: str = "user") -> dict[str, Any]:
     return {
         "ok": False,
