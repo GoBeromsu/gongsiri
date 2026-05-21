@@ -53,7 +53,14 @@ def make_bundle() -> NormalizedDataBundle:
 
 class AnalysisPipelineTests(unittest.TestCase):
     def test_analyze_bundle_builds_machine_readable_result(self) -> None:
-        result = analyze_bundle(make_bundle())
+        with patch(
+            "backend.analyzer.solar_step1.chat_json",
+            return_value={"explanations": {}},
+        ), patch(
+            "backend.analyzer.solar_step2.chat_json",
+            return_value={"warning_report": "위험도가 높아 경고 리포트를 제공합니다."},
+        ):
+            result = analyze_bundle(make_bundle())
 
         self.assertIsInstance(result, AnalysisResult)
         self.assertGreaterEqual(result.risk_score, 1)
