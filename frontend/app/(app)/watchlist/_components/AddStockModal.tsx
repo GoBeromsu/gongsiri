@@ -14,18 +14,30 @@ export default function AddStockModal({ onClose, onAdded }: Props) {
   const [selected, setSelected] = useState<CompanyInfo | null>(null)
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
+  const [error, setError] = useState('')
 
   async function handleAdd() {
     if (!selected) return
     setLoading(true)
+    setDone(false)
+    setError('')
+
     try {
-      await fetch('/api/watchlist', {
+      const res = await fetch('/api/watchlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ corp_code: selected.corp_code, corp_name: selected.corp_name, stock_code: selected.stock_code, market: selected.market }),
       })
+      const data = await res.json()
+
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.message ?? '워치리스트 저장에 실패했습니다.')
+      }
+
       setDone(true)
       setTimeout(() => { onAdded(); onClose() }, 1200)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '워치리스트 저장에 실패했습니다.')
     } finally {
       setLoading(false)
     }
@@ -39,7 +51,7 @@ export default function AddStockModal({ onClose, onAdded }: Props) {
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-tertiary)' }}><IconX size={18} /></button>
         </div>
 
-        <SearchInput onSelect={setSelected} />
+        <SearchInput onSelect={company => { setSelected(company); setError('') }} />
 
         {selected && (
           <div style={{ marginTop: 12, padding: '12px 14px', background: 'var(--color-bg-secondary)', borderRadius: 'var(--radius-md)', border: '0.5px solid var(--color-border-tertiary)' }}>
@@ -53,6 +65,12 @@ export default function AddStockModal({ onClose, onAdded }: Props) {
         {done && (
           <p style={{ marginTop: 12, fontSize: 13, color: '#639922', letterSpacing: '-0.02em' }}>
             ✓ 등록 완료 — 분석 파이프라인 시작됨
+          </p>
+        )}
+
+        {error && (
+          <p style={{ marginTop: 12, fontSize: 13, color: '#A32D2D', letterSpacing: '-0.02em' }}>
+            {error}
           </p>
         )}
 

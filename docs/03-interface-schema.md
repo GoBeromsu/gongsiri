@@ -94,6 +94,93 @@ Failure envelope:
 - PR1 read-only resolution uses `backend/collector/company_resolver.py`.
 - Persistent lookup behavior in `backend/collector/krx/search.py` is legacy collector behavior, not the Pi runtime path.
 
+## G001 Screen-MVP HTTP Contract Authority
+Source of truth for the screen-MVP HTTP slice:
+- `backend/openapi.json` owns the HTTP contract for `POST /api/v1/reports`
+- `frontend/lib/api/**` consumes that contract through typed client helpers
+- existing `backend/schemas/**` remain Python-domain truth, not page-specific HTTP truth
+
+Guardrails:
+- FastAPI is the single HTTP source of truth
+- API namespace is `/api/v1`
+- no DB persistence in this slice
+- no auth or user-scoped envelopes in this slice
+- no report-history persistence contract in this slice
+- manual-check batch requests must reject over 20 corp codes with HTTP 400
+
+### Mixed-shape policy for `POST /api/v1/reports`
+One route serves multiple report-page reads, but the request/response body must remain explicitly discriminated by `view`.
+
+Request modes:
+- `view: "report-list"` — report list page cold-load/read path
+- `view: "report-detail"` — single corp report detail read path
+- `view: "manual-check"` — batch-trigger/read path for “지금 체크”
+
+Response policy:
+- every success payload echoes the `view`
+- list/detail/manual-check each return a page-specific shape
+- cold-load fallback is explicit via `fallback.used` + `fallback.reason`
+
+### Report list response shape
+Purpose: feed `frontend/app/(app)/report/page.tsx` without requiring report-history persistence.
+
+```ts
+type ReportListResponse = {
+  view: "report-list";
+  reports: Array<{
+    corpCode: string;
+    corpName: string;
+    analyzedAt: string;
+    riskLevel: "normal" | "caution" | "high";
+    riskScore: number;
+  }>;
+  fallback: {
+    used: boolean;
+    reason?: "cold_start_no_cached_reports";
+  };
+};
+```
+
+### Report detail response shape
+Purpose: feed `frontend/app/(app)/report/[corpCode]/page.tsx`.
+
+```ts
+type ReportDetailResponse = {
+  view: "report-detail";
+  report: {
+    corpCode: string;
+    corpName: string;
+    analyzedAt: string;
+    riskLevel: "normal" | "caution" | "high";
+    riskScore: number;
+    checklist: ChecklistItem[];
+    shortTermReport: string;
+    longTermReport?: string;
+    disclaimer: string;
+    missingEvidence: string[];
+  };
+  fallback: {
+    used: boolean;
+    reason?: "cold_start_generated_detail";
+  };
+};
+```
+
+### Manual-check response shape
+Purpose: feed the dashboard “지금 체크” interaction without adding separate route families in this slice.
+
+```ts
+type ManualCheckResponse = {
+  view: "manual-check";
+  acceptedCorpCodes: string[];
+  maxBatchSize: 20;
+  fallback: {
+    used: boolean;
+    reason?: "read_only_manual_check";
+  };
+};
+```
+
 ## G003 Analyzer Schema Authority
 Source implementation target: `backend/schemas/analysis.py`
 

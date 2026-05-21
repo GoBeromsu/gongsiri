@@ -6,10 +6,12 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from backend.analyzer.pipeline import CONTRACT_VERSION, run_pipeline_request
+from backend.analyzer.qa import analyze_bundle, ask_qa
 from backend.collector.normalize import (
     build_and_save_normalized_bundle,
     build_normalized_bundle,
 )
+from backend.collector.runtime_normalize import build_runtime_normalized_bundle
 
 
 def _typed_pipeline_failure(
@@ -118,8 +120,20 @@ def _resolve_pipeline_trigger_request(payload: dict[str, Any]) -> tuple[dict[str
     return pipeline_request, default_used
 
 
-@app.post("/pipeline/trigger")
-async def trigger_analysis_pipeline(request: Request):
+def _resolve_qa_request(payload: dict[str, Any]) -> tuple[str, str | None, str | None]:
+    question = str(payload.get("question") or "").strip()
+    corp_code = str(payload.get("corpCode") or payload.get("corp_code") or "").strip() or None
+    keyword = str(payload.get("keyword") or "").strip() or None
+
+    if not question:
+        raise ValueError("question은 비어 있을 수 없습니다.")
+    if not corp_code and not keyword:
+        raise ValueError("corpCode 또는 keyword 중 하나는 반드시 필요합니다.")
+
+    return question, corp_code, keyword
+
+
+async def _run_pipeline_trigger_route(request: Request) -> JSONResponse:
     try:
         payload, _empty_body = await _read_pipeline_trigger_payload(request)
         pipeline_request, default_used = _resolve_pipeline_trigger_request(payload)
@@ -146,3 +160,28 @@ async def trigger_analysis_pipeline(request: Request):
             content=_typed_pipeline_failure("pipeline_trigger_failed", str(exc), source="user"),
             status_code=200,
         )
+
+
+@app.post("/pipeline/trigger")
+async def trigger_analysis_pipeline(request: Request):
+    return await _run_pipeline_trigger_route(request)
+
+
+@app.post("/api/v1/reports")
+async def create_report(request: Request):
+    return await _run_pipeline_trigger_route(request)
+
+
+@app.post("/qa")
+async def qa_route(request: Request):
+    try:
+        payload, _empty_body = await _read_pipeline_trigger_payload(request)
+        question, corp_code, keyword = _resolve_qa_request(payload)
+        bundle = build_runtime_normalized_bundle(keyword=keyword, corp_code=corp_code)
+        analysis_result = analyze_bundle(bundle)
+        answer = ask_qa(question, bundle, analysis_result)
+        return {"answer": answer}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc

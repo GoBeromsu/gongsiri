@@ -4,9 +4,9 @@ import RiskBadge from '@/components/ui/RiskBadge'
 import type { RiskLevel } from '@/lib/types'
 
 const REPORTS = [
-  { corp_code: '035720', corp_name: '카카오', risk_level: 'caution' as RiskLevel, risk_score: 2, analyzed_at: '2026-05-21 09:14' },
-  { corp_code: '005930', corp_name: '삼성전자', risk_level: 'normal' as RiskLevel, risk_score: 0, analyzed_at: '2026-05-21 08:52' },
-  { corp_code: '247540', corp_name: '에코프로비엠', risk_level: 'normal' as RiskLevel, risk_score: 1, analyzed_at: '2026-05-20 18:30' },
+  { corp_code: '00258801', corp_name: '카카오', risk_level: 'caution' as RiskLevel, risk_score: 2, analyzed_at: '2026-05-21 09:14' },
+  { corp_code: '00126380', corp_name: '삼성전자', risk_level: 'normal' as RiskLevel, risk_score: 0, analyzed_at: '2026-05-21 08:52' },
+  { corp_code: '00247540', corp_name: '에코프로비엠', risk_level: 'normal' as RiskLevel, risk_score: 1, analyzed_at: '2026-05-20 18:30' },
 ]
 
 export default function ReportListPage() {

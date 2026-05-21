@@ -11,6 +11,7 @@ PR1에서 Pi runtime과 Python collector bridge가 기대하는 환경변수를 
 - `GONGSIRI_CONTRACT_VERSION` — optional contract version override; default policy is `v1`
 - `GONGSIRI_CHECKPOINT_PATH` — optional local checkpoint file override for last-seen disclosure state
 - `GONGSIRI_SCHEDULER_INTERVAL_MINUTES` — optional default interval for cron/scheduler checks (default `30`)
+- `NEXT_PUBLIC_API_BASE_URL` — optional frontend/runtime HTTP base URL for typed API clients (default `http://localhost:8000`)
 
 ### Python collector side
 - `DART_API_KEY` — OpenDART disclosure API key
@@ -31,6 +32,7 @@ GONGSIRI_CONTRACT_VERSION=v1
 DART_API_KEY=
 GONGSIRI_CHECKPOINT_PATH=
 GONGSIRI_SCHEDULER_INTERVAL_MINUTES=30
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 ```
 
 `agent/.env.example` may mirror the Pi-only subset, but the repo-root `.env.example` is the onboarding source of truth for PR1.
@@ -45,3 +47,4 @@ GONGSIRI_SCHEDULER_INTERVAL_MINUTES=30
 - `agent/` runtime surfaces may auto-load ignored local env files from repo-root `.env` and `agent/.env`.
 - Explicit shell environment variables still win over env-file defaults.
 - Optional override for deterministic tooling/tests: `GONGSIRI_ENV_FILE=<path-to-env>`.
+- Frontend typed API helpers append `/api/v1` beneath `NEXT_PUBLIC_API_BASE_URL`; callers should pass the service origin, not a pre-suffixed reports path.

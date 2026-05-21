@@ -11,17 +11,32 @@ export default function SearchInput({ onSelect }: Props) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<CompanyInfo[]>([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const search = useCallback((q: string) => {
     if (timer.current) clearTimeout(timer.current)
-    if (!q.trim()) { setResults([]); return }
+    if (!q.trim()) {
+      setResults([])
+      setError('')
+      return
+    }
+
     timer.current = setTimeout(async () => {
       setLoading(true)
+      setError('')
       try {
         const res = await fetch(`/api/stocks/search?q=${encodeURIComponent(q)}`)
         const data = await res.json()
+
+        if (!res.ok) {
+          throw new Error(data.message ?? '종목 검색을 사용할 수 없습니다.')
+        }
+
         setResults(data.results ?? [])
+      } catch (err) {
+        setResults([])
+        setError(err instanceof Error ? err.message : '종목 검색을 사용할 수 없습니다.')
       } finally {
         setLoading(false)
       }
@@ -37,6 +52,7 @@ export default function SearchInput({ onSelect }: Props) {
     onSelect(company)
     setQuery('')
     setResults([])
+    setError('')
   }
 
   return (
@@ -50,15 +66,19 @@ export default function SearchInput({ onSelect }: Props) {
           style={{ width: '100%', height: 40, padding: '0 36px', fontSize: 14, fontFamily: 'Noto Sans KR, sans-serif', letterSpacing: '-0.03em', border: '0.5px solid var(--color-border-secondary)', borderRadius: 'var(--radius-md)', background: 'var(--color-bg-primary)', outline: 'none' }}
         />
         {query && (
-          <button onClick={() => { setQuery(''); setResults([]) }} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-tertiary)' }}>
+          <button onClick={() => { setQuery(''); setResults([]); setError('') }} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-tertiary)' }}>
             <IconX size={14} />
           </button>
         )}
       </div>
 
-      {(results.length > 0 || loading) && (
+      {(results.length > 0 || loading || error || query.trim()) && (
         <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--color-bg-primary)', border: '0.5px solid var(--color-border-secondary)', borderRadius: 'var(--radius-md)', marginTop: 4, zIndex: 50, overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
           {loading && <p style={{ padding: '10px 14px', fontSize: 13, color: 'var(--color-text-tertiary)' }}>검색 중...</p>}
+          {!loading && error && <p style={{ padding: '10px 14px', fontSize: 13, color: '#A32D2D' }}>{error}</p>}
+          {!loading && !error && results.length === 0 && query.trim() && (
+            <p style={{ padding: '10px 14px', fontSize: 13, color: 'var(--color-text-tertiary)' }}>검색 결과가 없습니다.</p>
+          )}
           {results.map(c => (
             <button key={c.corp_code} onClick={() => handleSelect(c)} style={{ width: '100%', textAlign: 'left', padding: '10px 14px', border: 'none', background: 'none', cursor: 'pointer', borderBottom: '0.5px solid var(--color-border-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
