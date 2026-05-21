@@ -11,7 +11,6 @@ from backend.collector.normalize import (
 from backend.schemas.pipeline import PipelineTriggerRequest
 
 
-
 def _typed_pipeline_failure(code: str, message: str, *, source: str = "user") -> dict[str, Any]:
     return {
         "ok": False,

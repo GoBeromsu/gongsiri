@@ -57,7 +57,9 @@ def test_empty_body_post_uses_route_default_and_appends_evidence(monkeypatch) ->
     assert payload["result"]["analysis_result"]["long_term_report"]
     assert payload["result"]["analysis_result"]["disclaimer"]
     assert payload["result"]["analysis_result"]["missing_evidence"] == []
-    assert calls == [{"request": {"source": "user", "metadata": {}, "keyword": "삼성전자"}, "trace_id": None}]
+    assert calls == [
+        {"request": {"source": "user", "metadata": {}, "keyword": "삼성전자"}, "trace_id": None}
+    ]
     assert payload["evidence"][-1] == {
         "source": "pipeline_trigger_route",
         "defaultUsed": True,
