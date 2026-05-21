@@ -36,7 +36,11 @@ def test_pipeline_trigger_empty_body_uses_route_level_default_evidence(monkeypat
         calls.append(dict(request))
         return _success_envelope(trace_id=trace_id or "generated-trace", source=request["source"])
 
-    monkeypatch.setattr("backend.main.run_pipeline_request", fake_run_pipeline_request, raising=False)
+    monkeypatch.setattr(
+        "backend.main.run_pipeline_request",
+        fake_run_pipeline_request,
+        raising=False,
+    )
 
     response = TestClient(app).post("/pipeline/trigger")
 
@@ -63,7 +67,11 @@ def test_pipeline_trigger_explicit_keyword_wins_over_default(monkeypatch):
         calls.append(dict(request))
         return _success_envelope(trace_id=trace_id or "keyword-trace", source=request["source"])
 
-    monkeypatch.setattr("backend.main.run_pipeline_request", fake_run_pipeline_request, raising=False)
+    monkeypatch.setattr(
+        "backend.main.run_pipeline_request",
+        fake_run_pipeline_request,
+        raising=False,
+    )
 
     response = TestClient(app).post(
         "/pipeline/trigger",
@@ -87,7 +95,11 @@ def test_pipeline_trigger_explicit_corp_code_wins_over_default(monkeypatch):
         calls.append(dict(request))
         return _success_envelope(trace_id=trace_id or "corp-trace", source=request["source"])
 
-    monkeypatch.setattr("backend.main.run_pipeline_request", fake_run_pipeline_request, raising=False)
+    monkeypatch.setattr(
+        "backend.main.run_pipeline_request",
+        fake_run_pipeline_request,
+        raising=False,
+    )
 
     response = TestClient(app).post(
         "/pipeline/trigger",
@@ -109,7 +121,11 @@ def test_pipeline_trigger_exception_maps_to_typed_failure(monkeypatch):
     def fake_run_pipeline_request(request: dict, *, trace_id: str | None = None):
         raise RuntimeError("route exploded")
 
-    monkeypatch.setattr("backend.main.run_pipeline_request", fake_run_pipeline_request, raising=False)
+    monkeypatch.setattr(
+        "backend.main.run_pipeline_request",
+        fake_run_pipeline_request,
+        raising=False,
+    )
 
     response = TestClient(app).post("/pipeline/trigger", json={"keyword": "카카오"})
 
