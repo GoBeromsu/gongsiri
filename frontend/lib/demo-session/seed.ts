@@ -62,7 +62,12 @@ const SEEDED_REPORTS: ReportSummaryContract[] = SEEDED_WATCHLIST.map(item => ({
 }))
 
 function byCorpCode<T extends { corpCode?: string; corp_code?: string }>(items: T[]): Record<string, T> {
-  return Object.fromEntries(items.map(item => [item.corpCode ?? item.corp_code ?? '', item]))
+  return Object.fromEntries(
+    items.flatMap(item => {
+      const corpCode = item.corpCode ?? item.corp_code
+      return corpCode ? [[corpCode, item]] : []
+    }),
+  )
 }
 
 export function createInitialDemoSessionState(): DemoSessionState {
