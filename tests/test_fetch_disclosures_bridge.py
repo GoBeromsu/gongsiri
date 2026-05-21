@@ -161,6 +161,7 @@ class FetchDisclosuresCliTests(unittest.TestCase):
         env = {
             "PATH": os.environ["PATH"],
             "PYTHONPATH": str(Path.cwd()),
+            "PYTHON_DOTENV_DISABLED": "1",
         }
 
         completed = subprocess.run(
