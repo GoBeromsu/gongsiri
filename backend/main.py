@@ -1,10 +1,9 @@
-import os
-from json import JSONDecodeError
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 
-from backend.analyzer.pipeline import CONTRACT_VERSION, run_pipeline_request
+from backend.analyzer.pipeline import run_pipeline_request
 from backend.collector.normalize import (
     build_and_save_normalized_bundle,
     build_normalized_bundle,
@@ -80,27 +79,21 @@ def save_bundle(keyword: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/pipeline/trigger")
-async def trigger_pipeline(request: Request):
-    try:
-        payload, empty_body = await _read_pipeline_trigger_payload(request)
-    except ValueError as exc:
-        return _typed_pipeline_failure("invalid_json", str(exc))
 
-    try:
-        trigger_request = PipelineTriggerRequest.model_validate(payload)
-    except Exception as exc:
-        return _typed_pipeline_failure("invalid_request", str(exc))
+def _pipeline_status_code(response: dict[str, Any]) -> int:
+    if response.get("ok"):
+        return 200
 
-    pipeline_request = trigger_request.to_pipeline_request()
-    used_route_default = False
-    default_keyword = os.getenv("GONGSIRI_DEFAULT_PIPELINE_KEYWORD", "카카오")
+    error = response.get("error")
+    code = error.get("code") if isinstance(error, dict) else None
+    if code in {"invalid_request", "corp_code_unresolved"}:
+        return 400
+    if code == "missing_env":
+        return 503
+    return 500
 
-    if empty_body or (not trigger_request.keyword and not trigger_request.corp_code):
-        pipeline_request["keyword"] = default_keyword
-        used_route_default = True
 
-    result = run_pipeline_request(pipeline_request, trace_id=trigger_request.trace_id)
-    if used_route_default:
-        return _append_route_default_evidence(result, default_keyword)
-    return result
+@app.post("/analysis/pipeline")
+def run_analysis_pipeline(request: dict[str, Any]):
+    response = run_pipeline_request(request, trace_id=request.get("traceId"))
+    return JSONResponse(content=response, status_code=_pipeline_status_code(response))
