@@ -38,7 +38,15 @@ export default function QAPage() {
         body: JSON.stringify({ corp_code: selectedCorp, question }),
       })
       const data = await res.json()
-      setMessages(prev => [...prev, { role: 'assistant', content: data.answer ?? '답변을 가져올 수 없습니다.' }])
+
+      if (!res.ok || !data.answer) {
+        throw new Error(data.message ?? '답변을 가져올 수 없습니다.')
+      }
+
+      setMessages(prev => [...prev, { role: 'assistant', content: data.answer }])
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '답변을 가져올 수 없습니다.'
+      setMessages(prev => [...prev, { role: 'assistant', content: message }])
     } finally {
       setLoading(false)
     }
@@ -49,7 +57,6 @@ export default function QAPage() {
       <Topbar title="Q&A" showSearch={false} />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 16, gap: 12, overflow: 'hidden' }}>
-        {/* Stock Selector */}
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>분석 종목</span>
           <select
@@ -62,7 +69,6 @@ export default function QAPage() {
           <RiskBadge level={corp.risk_level} size="sm" />
         </div>
 
-        {/* Chat Area */}
         <div style={{ flex: 1, background: 'var(--color-bg-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 'var(--radius-lg)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <div style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
             {messages.length === 0 && (
@@ -99,7 +105,6 @@ export default function QAPage() {
             )}
           </div>
 
-          {/* Input */}
           <div style={{ borderTop: '0.5px solid var(--color-border-tertiary)', padding: '12px 16px', display: 'flex', gap: 8 }}>
             <input
               value={input}

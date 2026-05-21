@@ -7,14 +7,8 @@ import AddStockModal from './_components/AddStockModal'
 import type { WatchlistItem } from '@/lib/types'
 import { IconTrash } from '@tabler/icons-react'
 
-const MOCK: WatchlistItem[] = [
-  { corp_code: '00258801', corp_name: '카카오', stock_code: '035720', market: 'KOSPI', price: 42650, change_rate: 1.2, risk_level: 'caution', risk_score: 2 },
-  { corp_code: '00126380', corp_name: '삼성전자', stock_code: '005930', market: 'KOSPI', price: 75400, change_rate: -0.5, risk_level: 'normal', risk_score: 0 },
-  { corp_code: '00247540', corp_name: '에코프로비엠', stock_code: '247540', market: 'KOSDAQ', price: 128900, change_rate: 3.8, risk_level: 'normal', risk_score: 1 },
-]
-
 export default function WatchlistPage() {
-  const [items, setItems] = useState<WatchlistItem[]>(MOCK)
+  const [items, setItems] = useState<WatchlistItem[]>([])
   const [showModal, setShowModal] = useState(false)
 
   function removeItem(corp_code: string) {
@@ -33,7 +27,11 @@ export default function WatchlistPage() {
               <span key={i} style={{ fontSize: 10.5, color: 'var(--color-text-tertiary)', fontWeight: 500, textAlign: i >= 1 && i <= 2 ? 'right' : 'left' }}>{h}</span>
             ))}
           </div>
-          {items.map(item => (
+          {items.length === 0 ? (
+            <div style={{ padding: '28px 16px', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: 13, letterSpacing: '-0.02em' }}>
+              등록된 워치리스트 종목이 없습니다.
+            </div>
+          ) : items.map(item => (
             <div key={item.corp_code} style={{ display: 'grid', gridTemplateColumns: '1fr 90px 72px 80px 120px 40px', padding: '12px 16px', borderBottom: '0.5px solid var(--color-border-tertiary)', alignItems: 'center', gap: 8 }}>
               <div>
                 <p style={{ fontSize: 13, fontWeight: 500 }}>{item.corp_name}</p>

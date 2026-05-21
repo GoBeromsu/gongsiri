@@ -5,14 +5,22 @@ on:
     # 코드/빌드에 영향 없는 변경(문서 등)에는 CI 를 돌리지 않는다.
     paths:
       - "backend/**"
+      - "backend/openapi.json"
       - "frontend/**"
+      - "frontend/lib/api/**"
+      - "docs/**"
+      - ".env.example"
       - "pyproject.toml"
       - ".github/workflows/ci.yml"
   push:
     branches: [dev, main]
     paths:
       - "backend/**"
+      - "backend/openapi.json"
       - "frontend/**"
+      - "frontend/lib/api/**"
+      - "docs/**"
+      - ".env.example"
       - "pyproject.toml"
       - ".github/workflows/ci.yml"
 
@@ -26,6 +34,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  contract-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Validate OpenAPI JSON contract
+        run: |
+          test -f backend/openapi.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          spec = json.loads(Path("backend/openapi.json").read_text())
+          assert spec["openapi"].startswith("3."), spec["openapi"]
+          assert "/api/v1/reports" in spec["paths"], "missing /api/v1/reports"
+          post = spec["paths"]["/api/v1/reports"]["post"]
+          assert "requestBody" in post, "missing requestBody"
+          assert "responses" in post and "200" in post["responses"], "missing 200 response"
+          print("OpenAPI contract OK")
+          PY
+
   python-lint:
     runs-on: ubuntu-latest
     steps:

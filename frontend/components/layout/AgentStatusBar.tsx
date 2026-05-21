@@ -5,6 +5,7 @@ import { IconRefresh } from '@tabler/icons-react'
 export default function AgentStatusBar() {
   const [seconds, setSeconds] = useState(1800)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     const t = setInterval(() => setSeconds(s => s > 0 ? s - 1 : 1800), 1000)
@@ -15,9 +16,18 @@ export default function AgentStatusBar() {
 
   async function handleCheck() {
     setLoading(true)
+    setError('')
     try {
-      await fetch('/api/pipeline/trigger', { method: 'POST' })
+      const res = await fetch('/api/pipeline/trigger', { method: 'POST' })
+      const data = await res.json()
+
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.message ?? '파이프라인 실행 요청에 실패했습니다.')
+      }
+
       setSeconds(1800)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '파이프라인 실행 요청에 실패했습니다.')
     } finally {
       setLoading(false)
     }
@@ -31,6 +41,7 @@ export default function AgentStatusBar() {
         에이전트 모니터링 중
       </span>
       <span className="font-mono" style={{ fontSize: 10, color: '#5F5E5A' }}>다음 폴링 {fmt(seconds)}</span>
+      {error && <span style={{ fontSize: 10, color: '#FFD4D4' }}>{error}</span>}
       <button
         onClick={handleCheck}
         disabled={loading}

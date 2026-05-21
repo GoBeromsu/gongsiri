@@ -117,6 +117,54 @@ def test_pipeline_trigger_explicit_corp_code_wins_over_default(monkeypatch):
     ]
 
 
+def test_api_v1_reports_reuses_pipeline_contract(monkeypatch):
+    calls: list[dict] = []
+
+    def fake_run_pipeline_request(request: dict, *, trace_id: str | None = None):
+        calls.append(dict(request))
+        return _success_envelope(trace_id=trace_id or "report-trace", source=request["source"])
+
+    monkeypatch.setattr(
+        "backend.main.run_pipeline_request",
+        fake_run_pipeline_request,
+        raising=False,
+    )
+
+    response = TestClient(app).post("/api/v1/reports", json={"corpCode": "00258801"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ok"] is True
+    assert payload["triggerSource"] == "user"
+    assert calls == [{"corpCode": "00258801", "source": "user", "contractVersion": "v1"}]
+
+
+def test_api_v1_reports_preserves_route_level_default_evidence(monkeypatch):
+    def fake_run_pipeline_request(request: dict, *, trace_id: str | None = None):
+        return _success_envelope(
+            trace_id=trace_id or "report-default-trace",
+            source=request["source"],
+        )
+
+    monkeypatch.setattr(
+        "backend.main.run_pipeline_request",
+        fake_run_pipeline_request,
+        raising=False,
+    )
+
+    response = TestClient(app).post("/api/v1/reports")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["ok"] is True
+    assert any(
+        item.get("source") == "pipeline_trigger_route"
+        and item.get("defaultUsed") is True
+        and item.get("defaultKeyword") == "카카오"
+        for item in payload["evidence"]
+    )
+
+
 def test_pipeline_trigger_exception_maps_to_typed_failure(monkeypatch):
     def fake_run_pipeline_request(request: dict, *, trace_id: str | None = None):
         raise RuntimeError("route exploded")
@@ -136,3 +184,116 @@ def test_pipeline_trigger_exception_maps_to_typed_failure(monkeypatch):
     assert payload["error"]["message"] == "route exploded"
     assert payload["triggerSource"] == "user"
     assert payload["traceId"]
+
+
+def test_qa_route_accepts_snake_case_corp_code(monkeypatch):
+    calls: list[dict] = []
+
+    def fake_build_runtime_normalized_bundle(*, keyword=None, corp_code=None):
+        calls.append({"keyword": keyword, "corp_code": corp_code})
+        return {"bundle": True}
+
+    monkeypatch.setattr(
+        "backend.main.build_runtime_normalized_bundle",
+        fake_build_runtime_normalized_bundle,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "backend.main.analyze_bundle",
+        lambda bundle: {"analysis": True},
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "backend.main.ask_qa",
+        lambda question, bundle, analysis_result: f"answer:{question}",
+        raising=False,
+    )
+
+    response = TestClient(app).post(
+        "/qa",
+        json={"corp_code": "00258801", "question": "CB 발행의 영향은?"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"answer": "answer:CB 발행의 영향은?"}
+    assert calls == [{"keyword": None, "corp_code": "00258801"}]
+
+
+def test_qa_route_accepts_camel_case_corp_code(monkeypatch):
+    calls: list[dict] = []
+
+    def fake_build_runtime_normalized_bundle(*, keyword=None, corp_code=None):
+        calls.append({"keyword": keyword, "corp_code": corp_code})
+        return {"bundle": True}
+
+    monkeypatch.setattr(
+        "backend.main.build_runtime_normalized_bundle",
+        fake_build_runtime_normalized_bundle,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "backend.main.analyze_bundle",
+        lambda bundle: {"analysis": True},
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "backend.main.ask_qa",
+        lambda question, bundle, analysis_result: "ok",
+        raising=False,
+    )
+
+    response = TestClient(app).post(
+        "/qa",
+        json={"corpCode": "00258801", "question": "최근 공시 요약해줘"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"answer": "ok"}
+    assert calls == [{"keyword": None, "corp_code": "00258801"}]
+
+
+def test_qa_route_accepts_keyword_when_corp_code_missing(monkeypatch):
+    calls: list[dict] = []
+
+    def fake_build_runtime_normalized_bundle(*, keyword=None, corp_code=None):
+        calls.append({"keyword": keyword, "corp_code": corp_code})
+        return {"bundle": True}
+
+    monkeypatch.setattr(
+        "backend.main.build_runtime_normalized_bundle",
+        fake_build_runtime_normalized_bundle,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "backend.main.analyze_bundle",
+        lambda bundle: {"analysis": True},
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "backend.main.ask_qa",
+        lambda question, bundle, analysis_result: "ok",
+        raising=False,
+    )
+
+    response = TestClient(app).post(
+        "/qa",
+        json={"keyword": "카카오", "question": "최근 공시 요약해줘"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"answer": "ok"}
+    assert calls == [{"keyword": "카카오", "corp_code": None}]
+
+
+def test_qa_route_requires_question_and_identifier():
+    client = TestClient(app)
+
+    missing_question = client.post("/qa", json={"corpCode": "00258801"})
+    assert missing_question.status_code == 400
+    assert missing_question.json()["detail"] == "question은 비어 있을 수 없습니다."
+
+    missing_identifier = client.post("/qa", json={"question": "질문"})
+    assert missing_identifier.status_code == 400
+    assert (
+        missing_identifier.json()["detail"] == "corpCode 또는 keyword 중 하나는 반드시 필요합니다."
+    )

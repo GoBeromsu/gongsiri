@@ -135,8 +135,7 @@ HoldingRow 목록       # 종목별 리스크 점수
 | `GET /api/watchlist` | DB에서 워치리스트 + 최신 risk_level 조회 |
 | `GET /api/disclosures/recent` | 최근 공시 알림 조회 |
 | `GET /api/portfolio/risk` | 보유 종목 가중 위험도 계산 |
-| `GET /api/report/:corpCode/latest` | 최신 AnalysisResult 조회 |
-| `GET /api/report/:corpCode/history` | 과거 리포트 목록 |
+| `POST /api/v1/reports` | report-list / report-detail / manual-check discriminated read contract |
 | `POST /api/qa` | `ask_qa` 호출 |
 | `GET /api/stocks/search` | k-skill 종목 검색 프록시 |
 
@@ -202,6 +201,16 @@ AnalysisResult.disclaimer
 ChangeBanner (MEM-02)
   → 직전 분석 대비 risk_score 상승 시 상단 배너
 ```
+
+### Screen-MVP API integration note
+
+- Current UI pages still use local mock data.
+- The approved screen-MVP slice introduces one typed HTTP contract at `POST /api/v1/reports`.
+- `frontend/lib/api/**` owns the typed request/response helpers for:
+  - report list page
+  - report detail page
+  - dashboard manual-check action
+- No UI page/component rewiring is bundled in this slice; later tasks should adopt the typed helpers without redefining the contract ad hoc.
 
 **컴포넌트 상세**:
 
