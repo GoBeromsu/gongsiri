@@ -1,7 +1,5 @@
 'use client'
 
-'use client'
-
 import Topbar from '@/components/layout/Topbar'
 import MetricCard from '@/components/ui/MetricCard'
 import RiskBadge from '@/components/ui/RiskBadge'
