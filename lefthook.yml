@@ -14,7 +14,7 @@ pre-commit:
       # frontend 범위 파일만 처리 — agent/ 등 다른 TS 패키지는 각자 린트
       run: |
         if [ -f frontend/package.json ] && [ -d frontend/node_modules ]; then
-          pnpm --dir frontend exec eslint --fix {staged_files}
+          pnpm --dir frontend exec eslint --fix --no-error-on-unmatched-pattern {staged_files}
         else
           echo "lefthook: eslint skipped (frontend not initialized)"
         fi

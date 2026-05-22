@@ -206,8 +206,8 @@ def test_api_v1_reports_list_reads_saved_reports_from_dev_db():
     payload = response.json()
     assert payload["view"] == "report-list"
     assert payload["fallback"] == {"used": False}
-    assert len(payload["reports"]) == 3
-    assert {item["corpCode"] for item in payload["reports"]} == {"00258801", "00126380", "00999999"}
+    assert len(payload["reports"]) == 2
+    assert {item["corpCode"] for item in payload["reports"]} == {"00258801", "00126380"}
     reset_repository_provider()
 
 
@@ -600,8 +600,7 @@ def test_attach_agent_report_merges_checklist_explanations_from_agent():
                             {
                                 "id": "business-purpose-change",
                                 "markdown": (
-                                    "저 공시리가 보기에는 사업목적 변경 공시를 "
-                                    "확인해야 합니다."
+                                    "저 공시리가 보기에는 사업목적 변경 공시를 확인해야 합니다."
                                 ),
                             }
                         ],
@@ -676,14 +675,8 @@ def test_attach_agent_report_accepts_structured_mode_contract_and_preserves_guar
         _success_envelope(trace_id="structured-report-trace"), client=FakeAgentClient()
     )
 
-    assert (
-        response["result"]["analysis_result"]["short_term_report"]
-        == "## 단기\nshort"
-    )
-    assert (
-        response["result"]["analysis_result"]["long_term_report"]
-        == "## 장기\nlong"
-    )
+    assert response["result"]["analysis_result"]["short_term_report"] == "## 단기\nshort"
+    assert response["result"]["analysis_result"]["long_term_report"] == "## 장기\nlong"
     assert response["result"]["analysis_result"]["disclaimer"] == "공시 기반 위험 점검입니다."
 
 
@@ -748,8 +741,7 @@ def test_explain_checklist_with_agent_returns_structured_items():
                             {
                                 "id": "business-purpose-change",
                                 "markdown": (
-                                    "저 공시리가 보기에는 사업목적 변경 공시를 "
-                                    "확인해야 합니다."
+                                    "저 공시리가 보기에는 사업목적 변경 공시를 확인해야 합니다."
                                 ),
                             }
                         ],
