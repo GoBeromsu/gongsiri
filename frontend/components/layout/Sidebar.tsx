@@ -96,7 +96,6 @@ export default function Sidebar() {
           </div>
           <div style={{ minWidth: 0 }}>
             <p style={{ fontSize: 12, color: '#E8F4FF', letterSpacing: '-0.02em' }}>공시리 관리자</p>
-            <p style={{ fontSize: 10, color: '#5F5E5A', letterSpacing: '-0.01em' }}>dev session</p>
           </div>
           <button
             type="button"

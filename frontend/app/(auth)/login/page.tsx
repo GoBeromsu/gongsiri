@@ -48,9 +48,9 @@ export default function LoginPage() {
       <section style={{ width: '100%', maxWidth: 420, background: 'var(--color-bg-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 'var(--radius-lg)', padding: 28, boxShadow: '0 18px 40px rgba(10,15,28,0.08)' }}>
         <div style={{ marginBottom: 22 }}>
           <p className="font-display" style={{ fontSize: 38, color: 'var(--color-navy)', lineHeight: 1 }}>공시리<span style={{ color: 'var(--color-blue)' }}>.</span></p>
-          <h1 style={{ fontSize: 20, letterSpacing: '-0.04em', marginTop: 10 }}>데모 관리자 로그인</h1>
+          <h1 style={{ fontSize: 20, letterSpacing: '-0.04em', marginTop: 10 }}>관리자 로그인</h1>
           <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6, marginTop: 8 }}>
-            개발 모드에서는 로컬 DB에 seed된 <span className="font-mono">admin/admin</span> 계정으로 앱 shell을 확인합니다.
+            개발 환경에서는 <span className="font-mono">admin/admin</span> 계정으로 로그인할 수 있습니다.
           </p>
         </div>
 
