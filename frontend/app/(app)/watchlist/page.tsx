@@ -50,7 +50,7 @@ export default function WatchlistPage() {
           </div>
           {state.loadStatus.state === 'loading' ? (
             <div style={{ padding: '28px 16px', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: 13, letterSpacing: '-0.02em' }}>
-              dev DB 워치리스트를 불러오는 중입니다.
+              워치리스트를 불러오는 중입니다.
             </div>
           ) : state.loadStatus.state === 'error' ? (
             <div style={{ padding: '28px 16px', textAlign: 'center', color: '#A32D2D', fontSize: 13, letterSpacing: '-0.02em' }}>
@@ -95,7 +95,7 @@ export default function WatchlistPage() {
           ))}
         </div>
         <p style={{ marginTop: 10, fontSize: 11, color: 'var(--color-text-tertiary)', letterSpacing: '-0.02em' }}>
-          종목 등록/삭제는 backend BFF를 거쳐 dev DB에 저장됩니다. 현재가·등락은 아직 연결 전이라 비워 둡니다.
+          등록하거나 삭제한 종목은 워치리스트에 바로 반영됩니다.
         </p>
       </div>
     </div>

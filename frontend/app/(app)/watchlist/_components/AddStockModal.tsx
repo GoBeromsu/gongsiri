@@ -20,7 +20,7 @@ function toWatchlistItem(company: CompanyInfo): WatchlistItem | null {
     market: company.market,
     risk_level: "normal",
     risk_score: 0,
-    last_analyzed: "데모 세션",
+    last_analyzed: "분석 전",
   };
 }
 
@@ -39,7 +39,7 @@ export default function AddStockModal({ onClose }: Props) {
     if (!item) {
       dispatch({ type: "watchlist/notFound", query: selected.corp_name });
       setError(
-        `${selected.corp_name}은 데모 종목 카탈로그에서 찾을 수 없습니다.`,
+        `${selected.corp_name} 종목 정보를 찾을 수 없습니다.`,
       );
       return;
     }
@@ -127,8 +127,7 @@ export default function AddStockModal({ onClose }: Props) {
             letterSpacing: "-0.02em",
           }}
         >
-          검색 결과는 dev seed 카탈로그 기준이며, 선택 후 저장은 backend BFF를
-          거쳐 dev DB에 반영됩니다.
+          검색한 종목을 선택하면 워치리스트에 추가됩니다.
         </p>
 
         {selected && (
@@ -172,7 +171,7 @@ export default function AddStockModal({ onClose }: Props) {
               letterSpacing: "-0.02em",
             }}
           >
-            ✓ 등록 완료 — 데모 세션 워치리스트에 반영됨
+            ✓ 워치리스트에 등록되었습니다
           </p>
         )}
 

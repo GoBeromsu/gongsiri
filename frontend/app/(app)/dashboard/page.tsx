@@ -1,7 +1,5 @@
 'use client'
 
-'use client'
-
 import Topbar from '@/components/layout/Topbar'
 import MetricCard from '@/components/ui/MetricCard'
 import RiskBadge from '@/components/ui/RiskBadge'
@@ -54,7 +52,7 @@ export default function DashboardPage() {
             <div style={{ padding: '12px 16px', borderBottom: '0.5px solid var(--color-border-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-0.03em' }}>워치리스트</span>
               <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)', letterSpacing: '-0.02em' }}>
-                공시·리스크는 dev DB 기준
+                공시·리스크 분석 기준
               </span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px 72px 80px 100px', padding: '7px 16px', background: 'var(--color-bg-secondary)', gap: 8 }}>
@@ -64,7 +62,7 @@ export default function DashboardPage() {
             </div>
             {state.loadStatus.state === 'loading' && (
               <div style={{ padding: '28px 16px', textAlign: 'center', color: 'var(--color-text-tertiary)', fontSize: 13 }}>
-                dev DB에서 워치리스트를 불러오는 중입니다.
+                워치리스트를 불러오는 중입니다.
               </div>
             )}
             {state.loadStatus.state === 'error' && (
@@ -110,7 +108,6 @@ export default function DashboardPage() {
             <div style={{ background: 'var(--color-bg-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
               <div style={{ padding: '12px 16px', borderBottom: '0.5px solid var(--color-border-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: 13, fontWeight: 500, letterSpacing: '-0.03em' }}>최근 공시 알림</span>
-                <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>backend BFF 경유</span>
               </div>
               {state.loadStatus.state === 'loading' && (
                 <div style={{ padding: '20px 14px', color: 'var(--color-text-tertiary)', fontSize: 12 }}>
@@ -124,7 +121,7 @@ export default function DashboardPage() {
               )}
               {state.loadStatus.state === 'ready' && alerts.length === 0 && (
                 <div style={{ padding: '20px 14px', color: 'var(--color-text-tertiary)', fontSize: 12 }}>
-                  dev DB에 아직 표시할 최근 공시가 없습니다.
+                  아직 표시할 최근 공시가 없습니다.
                 </div>
               )}
               {state.loadStatus.state === 'ready' && alerts.map(a => {
