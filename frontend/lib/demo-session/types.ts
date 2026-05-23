@@ -1,61 +1,69 @@
-import type { ReportDetailContract, ReportSummaryContract, RiskLevel } from '@/lib/api/types'
-import type { DisclosureAlert, WatchlistItem } from '@/lib/types'
+import type {
+  ReportDetailContract,
+  ReportSummaryContract,
+  RiskLevel,
+} from "@/lib/api/types";
+import type { DisclosureAlert, WatchlistItem } from "@/lib/types";
 
-export type DemoUserRole = 'admin' | 'user'
+export type DemoUserRole = "admin" | "user";
 
 export interface DemoAuthState {
-  isAuthenticated: boolean
-  role: DemoUserRole
-  displayName: string
-  onboardingComplete: boolean
+  isAuthenticated: boolean;
+  role: DemoUserRole;
+  displayName: string;
+  onboardingComplete: boolean;
 }
 
 export interface DemoAddStatus {
-  state: 'idle' | 'added' | 'duplicate' | 'not-found'
-  message: string
-  corpCode?: string
+  state: "idle" | "added" | "duplicate" | "not-found";
+  message: string;
+  corpCode?: string;
 }
 
 export interface DemoManualCheckSnapshot {
-  requestedAt: string
-  acceptedCorpCodes: string[]
-  maxBatchSize: 20
+  requestedAt: string;
+  acceptedCorpCodes: string[];
+  maxBatchSize: 20;
 }
 
 export interface DemoSessionState {
-  auth: DemoAuthState
-  companyCatalog: WatchlistItem[]
-  watchlistByCorpCode: Record<string, WatchlistItem>
-  watchlistOrder: string[]
-  addStatus: DemoAddStatus
-  lastManualCheck: DemoManualCheckSnapshot | null
-  reportSummariesByCorpCode: Record<string, ReportSummaryContract>
-  reportDetailsByCorpCode: Record<string, ReportDetailContract>
-  recentDisclosures: DisclosureAlert[]
-  loadStatus: { state: 'idle' | 'loading' | 'ready' | 'error'; message: string }
+  auth: DemoAuthState;
+  companyCatalog: WatchlistItem[];
+  watchlistByCorpCode: Record<string, WatchlistItem>;
+  watchlistOrder: string[];
+  addStatus: DemoAddStatus;
+  lastManualCheck: DemoManualCheckSnapshot | null;
+  reportSummariesByCorpCode: Record<string, ReportSummaryContract>;
+  reportDetailsByCorpCode: Record<string, ReportDetailContract>;
+  recentDisclosures: DisclosureAlert[];
+  loadStatus: { state: "loading" | "ready" | "error"; message: string };
 }
 
 export interface DemoDashboardSummary {
-  count: number
-  todayDisclosures: number
-  cautionCount: number
-  dangerCount: number
+  count: number;
+  todayDisclosures: number;
+  cautionCount: number;
+  dangerCount: number;
 }
 
 export interface DemoQaStockOption {
-  corp_code: string
-  corp_name: string
-  risk_level: RiskLevel
+  corp_code: string;
+  corp_name: string;
+  risk_level: RiskLevel;
 }
 
 export type DemoSessionAction =
-  | { type: 'session/loadStart' }
-  | { type: 'session/loadSuccess'; watchlist: WatchlistItem[]; recentDisclosures: DisclosureAlert[] }
-  | { type: 'session/loadError'; message: string }
-  | { type: 'watchlist/add'; item: WatchlistItem }
-  | { type: 'watchlist/remove'; corpCode: string }
-  | { type: 'watchlist/notFound'; query: string }
-  | { type: 'manualCheck/record'; snapshot: DemoManualCheckSnapshot }
-  | { type: 'reports/upsertSummary'; summary: ReportSummaryContract }
-  | { type: 'reports/upsertDetail'; detail: ReportDetailContract }
-  | { type: 'session/reset' }
+  | { type: "session/loadStart" }
+  | {
+      type: "session/loadSuccess";
+      watchlist: WatchlistItem[];
+      recentDisclosures: DisclosureAlert[];
+    }
+  | { type: "session/loadError"; message: string }
+  | { type: "watchlist/add"; item: WatchlistItem }
+  | { type: "watchlist/remove"; corpCode: string }
+  | { type: "watchlist/notFound"; query: string }
+  | { type: "manualCheck/record"; snapshot: DemoManualCheckSnapshot }
+  | { type: "reports/upsertSummary"; summary: ReportSummaryContract }
+  | { type: "reports/upsertDetail"; detail: ReportDetailContract }
+  | { type: "session/reset" };
