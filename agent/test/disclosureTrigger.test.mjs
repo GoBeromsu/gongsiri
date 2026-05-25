@@ -1,17 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
-  chmodSync,
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { spawnSync } from "node:child_process";
-import { createServer } from "node:http";
 
 import { createDisclosureScheduler } from "../dist/scheduler/disclosureScheduler.js";
 import { LocalDisclosureCheckpointStore } from "../dist/state/disclosureCheckpoint.js";
@@ -24,18 +15,6 @@ import { createFetchDisclosuresTool } from "../dist/tools/fetchDisclosures.js";
 const makeTempDir = () => mkdtempSync(join(tmpdir(), "gongsiri-trigger-"));
 
 const makeCheckpointPath = () => join(makeTempDir(), "checkpoints.json");
-
-const makeExecutable = (name, body) => {
-  const dir = makeTempDir();
-  const scriptPath = join(dir, name);
-  writeFileSync(scriptPath, body, { encoding: "utf-8" });
-  chmodSync(scriptPath, 0o755);
-
-  return {
-    scriptPath,
-    cleanup: () => rmSync(dir, { recursive: true, force: true }),
-  };
-};
 
 test("createDisclosureTriggerRequest supports only user/system/cron", () => {
   const request = createDisclosureTriggerRequest({
