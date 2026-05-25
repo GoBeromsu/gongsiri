@@ -1,0 +1,5 @@
+{
+  "installCommand": "pnpm install --frozen-lockfile --config.strict-dep-builds=false",
+  "buildCommand": "pnpm build",
+  "framework": "nextjs"
+}
