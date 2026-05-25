@@ -26,7 +26,9 @@ import {
 loadLocalEnvFiles();
 
 const HOST = process.env.GONGSIRI_AGENT_HOST ?? process.env.AGENT_HTTP_HOST ?? "127.0.0.1";
-const PORT = Number(process.env.GONGSIRI_AGENT_PORT ?? process.env.AGENT_HTTP_PORT ?? "8787");
+const PORT = Number(
+  process.env.GONGSIRI_AGENT_PORT ?? process.env.AGENT_HTTP_PORT ?? process.env.PORT ?? "8787"
+);
 
 const failure = (
   request: Partial<AgentServiceRequest> | undefined,

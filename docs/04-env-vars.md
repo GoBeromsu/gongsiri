@@ -81,3 +81,45 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 - Explicit shell environment variables still win over env-file defaults.
 - Optional override for deterministic tooling/tests: `GONGSIRI_ENV_FILE=<path-to-env>`.
 - Frontend typed API helpers append `/api/v1` beneath `NEXT_PUBLIC_API_BASE_URL`; callers should pass the service origin, not a pre-suffixed reports path.
+
+## Deployment Mapping
+
+### Vercel frontend
+
+- Project root: `frontend/`
+- Required env:
+  - `NEXT_PUBLIC_API_BASE_URL` — Railway backend public URL, for example `https://gongsiri-backend.up.railway.app`
+
+### Railway backend
+
+- Service config: `backend/railway.toml`
+- Dockerfile: `backend/Dockerfile`
+- Required env:
+  - `UPSTAGE_API_KEY`
+  - `DART_API_KEY`
+  - `GONGSIRI_AGENT_URL` — Railway agent public URL, for example `https://gongsiri-agent.up.railway.app`
+- Optional env:
+  - `UPSTAGE_MODEL`
+  - `UPSTAGE_BASE_URL`
+  - `KRX_API_KEY`
+  - `NAVER_CLIENT_ID`
+  - `NAVER_CLIENT_SECRET`
+  - `GONGSIRI_DB_MODE`
+  - `GONGSIRI_DB_PATH`
+  - `GONGSIRI_AUTH_MODE`
+
+### Railway agent
+
+- Service config: `agent/railway.toml`
+- Dockerfile: `agent/Dockerfile`
+- Required env:
+  - `UPSTAGE_API_KEY`
+- Optional env:
+  - `UPSTAGE_MODEL`
+  - `UPSTAGE_BASE_URL`
+  - `DART_API_KEY`
+  - `GONGSIRI_CONTRACT_VERSION`
+  - `GONGSIRI_SCHEDULER_INTERVAL_MINUTES`
+  - `GONGSIRI_CHECKPOINT_PATH`
+
+Railway provides `PORT`; the agent maps that automatically when `GONGSIRI_AGENT_PORT` is unset.
