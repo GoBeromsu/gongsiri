@@ -6,18 +6,20 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
-  writeFileSync
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
+import { createServer } from "node:http";
 
 import { createDisclosureScheduler } from "../dist/scheduler/disclosureScheduler.js";
 import { LocalDisclosureCheckpointStore } from "../dist/state/disclosureCheckpoint.js";
 import {
   createDisclosureTriggerRequest,
-  runTriggeredDisclosureCheck
+  runTriggeredDisclosureCheck,
 } from "../dist/triggers/disclosureTrigger.js";
+import { createFetchDisclosuresTool } from "../dist/tools/fetchDisclosures.js";
 
 const makeTempDir = () => mkdtempSync(join(tmpdir(), "gongsiri-trigger-"));
 
@@ -31,7 +33,7 @@ const makeExecutable = (name, body) => {
 
   return {
     scriptPath,
-    cleanup: () => rmSync(dir, { recursive: true, force: true })
+    cleanup: () => rmSync(dir, { recursive: true, force: true }),
   };
 };
 
@@ -41,7 +43,7 @@ test("createDisclosureTriggerRequest supports only user/system/cron", () => {
     keyword: "카카오",
     traceId: "trigger-trace",
     intervalMinutes: 30,
-    runReason: "manual verification"
+    runReason: "manual verification",
   });
 
   assert.equal(request.source, "system");
@@ -58,7 +60,7 @@ test("first successful trigger initializes checkpoint without reporting all disc
     createDisclosureTriggerRequest({
       source: "user",
       keyword: "카카오",
-      traceId: "first-run"
+      traceId: "first-run",
     }),
     {
       checkpointStore,
@@ -66,7 +68,7 @@ test("first successful trigger initializes checkpoint without reporting all disc
         descriptor: {
           name: "fetch_disclosures",
           description: "stub",
-          canonicalCommand: "python -m backend.collector.cli.fetch_disclosures"
+          canonicalCommand: "python -m backend.collector.cli.fetch_disclosures",
         },
         invoke: async () => ({
           ok: true,
@@ -77,14 +79,22 @@ test("first successful trigger initializes checkpoint without reporting all disc
             corpCode: "00258801",
             company: null,
             disclosures: [
-              { rcept_no: "202605200002", report_nm: "사업보고서", rcept_dt: "20260520" },
-              { rcept_no: "202605200001", report_nm: "분기보고서", rcept_dt: "20260520" }
-            ]
+              {
+                rcept_no: "202605200002",
+                report_nm: "사업보고서",
+                rcept_dt: "20260520",
+              },
+              {
+                rcept_no: "202605200001",
+                report_nm: "분기보고서",
+                rcept_dt: "20260520",
+              },
+            ],
           },
-          evidence: []
-        })
-      }
-    }
+          evidence: [],
+        }),
+      },
+    },
   );
 
   assert.equal(result.ok, true);
@@ -105,7 +115,7 @@ test("subsequent successful trigger reports only unseen disclosures", async () =
     createDisclosureTriggerRequest({
       source: "cron",
       keyword: "카카오",
-      traceId: "cron-run"
+      traceId: "cron-run",
     }),
     {
       checkpointStore,
@@ -113,7 +123,7 @@ test("subsequent successful trigger reports only unseen disclosures", async () =
         descriptor: {
           name: "fetch_disclosures",
           description: "stub",
-          canonicalCommand: "python -m backend.collector.cli.fetch_disclosures"
+          canonicalCommand: "python -m backend.collector.cli.fetch_disclosures",
         },
         invoke: async () => ({
           ok: true,
@@ -124,15 +134,27 @@ test("subsequent successful trigger reports only unseen disclosures", async () =
             corpCode: "00258801",
             company: null,
             disclosures: [
-              { rcept_no: "202605200004", report_nm: "신규 공시", rcept_dt: "20260520" },
-              { rcept_no: "202605200003", report_nm: "신규 공시", rcept_dt: "20260520" },
-              { rcept_no: "202605200002", report_nm: "사업보고서", rcept_dt: "20260520" }
-            ]
+              {
+                rcept_no: "202605200004",
+                report_nm: "신규 공시",
+                rcept_dt: "20260520",
+              },
+              {
+                rcept_no: "202605200003",
+                report_nm: "신규 공시",
+                rcept_dt: "20260520",
+              },
+              {
+                rcept_no: "202605200002",
+                report_nm: "사업보고서",
+                rcept_dt: "20260520",
+              },
+            ],
           },
-          evidence: []
-        })
-      }
-    }
+          evidence: [],
+        }),
+      },
+    },
   );
 
   assert.equal(result.ok, true);
@@ -152,7 +174,7 @@ test("failed trigger does not advance checkpoint", async () => {
     createDisclosureTriggerRequest({
       source: "system",
       keyword: "카카오",
-      traceId: "failed-run"
+      traceId: "failed-run",
     }),
     {
       checkpointStore,
@@ -160,7 +182,7 @@ test("failed trigger does not advance checkpoint", async () => {
         descriptor: {
           name: "fetch_disclosures",
           description: "stub",
-          canonicalCommand: "python -m backend.collector.cli.fetch_disclosures"
+          canonicalCommand: "python -m backend.collector.cli.fetch_disclosures",
         },
         invoke: async () => ({
           ok: false,
@@ -169,12 +191,12 @@ test("failed trigger does not advance checkpoint", async () => {
           observedAt: "2026-05-20T12:20:00Z",
           error: {
             code: "missing_env",
-            message: "DART_API_KEY가 .env에 없습니다."
+            message: "DART_API_KEY가 .env에 없습니다.",
           },
-          evidence: []
-        })
-      }
-    }
+          evidence: [],
+        }),
+      },
+    },
   );
 
   assert.equal(result.ok, false);
@@ -190,7 +212,7 @@ test("keyword then corpCode runs share the same checkpoint continuity", async ()
     createDisclosureTriggerRequest({
       source: "user",
       keyword: "카카오",
-      traceId: "keyword-first"
+      traceId: "keyword-first",
     }),
     {
       checkpointStore,
@@ -198,7 +220,7 @@ test("keyword then corpCode runs share the same checkpoint continuity", async ()
         descriptor: {
           name: "fetch_disclosures",
           description: "stub",
-          canonicalCommand: "python -m backend.collector.cli.fetch_disclosures"
+          canonicalCommand: "python -m backend.collector.cli.fetch_disclosures",
         },
         invoke: async () => ({
           ok: true,
@@ -208,19 +230,25 @@ test("keyword then corpCode runs share the same checkpoint continuity", async ()
           data: {
             corpCode: "00258801",
             company: null,
-            disclosures: [{ rcept_no: "202605200020", report_nm: "사업보고서", rcept_dt: "20260520" }]
+            disclosures: [
+              {
+                rcept_no: "202605200020",
+                report_nm: "사업보고서",
+                rcept_dt: "20260520",
+              },
+            ],
           },
-          evidence: []
-        })
-      }
-    }
+          evidence: [],
+        }),
+      },
+    },
   );
 
   const result = await runTriggeredDisclosureCheck(
     createDisclosureTriggerRequest({
       source: "cron",
       corpCode: "00258801",
-      traceId: "corpcode-second"
+      traceId: "corpcode-second",
     }),
     {
       checkpointStore,
@@ -228,7 +256,7 @@ test("keyword then corpCode runs share the same checkpoint continuity", async ()
         descriptor: {
           name: "fetch_disclosures",
           description: "stub",
-          canonicalCommand: "python -m backend.collector.cli.fetch_disclosures"
+          canonicalCommand: "python -m backend.collector.cli.fetch_disclosures",
         },
         invoke: async () => ({
           ok: true,
@@ -239,14 +267,22 @@ test("keyword then corpCode runs share the same checkpoint continuity", async ()
             corpCode: "00258801",
             company: null,
             disclosures: [
-              { rcept_no: "202605200021", report_nm: "신규 공시", rcept_dt: "20260520" },
-              { rcept_no: "202605200020", report_nm: "사업보고서", rcept_dt: "20260520" }
-            ]
+              {
+                rcept_no: "202605200021",
+                report_nm: "신규 공시",
+                rcept_dt: "20260520",
+              },
+              {
+                rcept_no: "202605200020",
+                report_nm: "사업보고서",
+                rcept_dt: "20260520",
+              },
+            ],
           },
-          evidence: []
-        })
-      }
-    }
+          evidence: [],
+        }),
+      },
+    },
   );
 
   assert.equal(result.ok, true);
@@ -264,7 +300,7 @@ test("corpCode then keyword runs share the same checkpoint continuity", async ()
     createDisclosureTriggerRequest({
       source: "system",
       keyword: "카카오",
-      traceId: "keyword-second"
+      traceId: "keyword-second",
     }),
     {
       checkpointStore,
@@ -272,7 +308,7 @@ test("corpCode then keyword runs share the same checkpoint continuity", async ()
         descriptor: {
           name: "fetch_disclosures",
           description: "stub",
-          canonicalCommand: "python -m backend.collector.cli.fetch_disclosures"
+          canonicalCommand: "python -m backend.collector.cli.fetch_disclosures",
         },
         invoke: async () => ({
           ok: true,
@@ -283,14 +319,22 @@ test("corpCode then keyword runs share the same checkpoint continuity", async ()
             corpCode: "00258801",
             company: null,
             disclosures: [
-              { rcept_no: "202605200031", report_nm: "신규 공시", rcept_dt: "20260520" },
-              { rcept_no: "202605200030", report_nm: "사업보고서", rcept_dt: "20260520" }
-            ]
+              {
+                rcept_no: "202605200031",
+                report_nm: "신규 공시",
+                rcept_dt: "20260520",
+              },
+              {
+                rcept_no: "202605200030",
+                report_nm: "사업보고서",
+                rcept_dt: "20260520",
+              },
+            ],
           },
-          evidence: []
-        })
-      }
-    }
+          evidence: [],
+        }),
+      },
+    },
   );
 
   assert.equal(result.ok, true);
@@ -317,7 +361,7 @@ test("scheduler runOnce always sends cron source", async () => {
         checkpoint: {
           checkpointPath: "/tmp/checkpoints.json",
           previousLastSeen: null,
-          currentLastSeen: null
+          currentLastSeen: null,
         },
         result: {
           ok: true,
@@ -327,69 +371,104 @@ test("scheduler runOnce always sends cron source", async () => {
           data: {
             corpCode: "00258801",
             company: null,
-            disclosures: []
+            disclosures: [],
           },
-          evidence: []
-        }
+          evidence: [],
+        },
       };
-    }
+    },
   });
 
   const result = await scheduler.runOnce({
     keyword: "카카오",
-    traceId: "scheduler-run"
+    traceId: "scheduler-run",
   });
 
   assert.equal(observedSource, "cron");
   assert.equal(result.triggerSource, "cron");
 });
 
-test("CLI one-off trigger from agent/ returns typed trigger envelope", () => {
-  const { scriptPath, cleanup } = makeExecutable(
-    "python-success.sh",
-    `#!/bin/sh
-printf '%s\n' '{"ok":true,"traceId":"cli-trace","contractVersion":"v1","observedAt":"2026-05-20T12:40:00Z","data":{"corpCode":"00258801","company":{"corp_name":"카카오","stock_code":"035720","corp_code":"00258801","market":"KOSPI"},"disclosures":[{"rcept_no":"202605200010","report_nm":"사업보고서","rcept_dt":"20260520"}]},"evidence":[]}'
-`
-  );
+test("CLI one-off trigger from agent/ returns typed trigger envelope", async () => {
   const checkpointPath = makeCheckpointPath();
+  const checkpointStore = new LocalDisclosureCheckpointStore(checkpointPath);
+
+  // Capture what the tool actually sends to verify the HTTP path is taken
+  let capturedUrl = null;
+  let capturedMethod = null;
+  let capturedBody = null;
+
+  const stubFetch = async (url, init) => {
+    capturedUrl = url;
+    capturedMethod = init?.method;
+    capturedBody = init?.body ? JSON.parse(init.body) : null;
+    return {
+      ok: true,
+      status: 200,
+      text: async () =>
+        JSON.stringify({
+          ok: true,
+          traceId: "cli-trace",
+          contractVersion: "v1",
+          observedAt: "2026-05-20T12:40:00Z",
+          data: {
+            corpCode: "00258801",
+            company: {
+              corp_name: "카카오",
+              stock_code: "035720",
+              corp_code: "00258801",
+              market: "KOSPI",
+            },
+            disclosures: [
+              {
+                rcept_no: "202605200010",
+                report_nm: "사업보고서",
+                rcept_dt: "20260520",
+              },
+            ],
+          },
+          evidence: [],
+        }),
+    };
+  };
+
+  const tool = createFetchDisclosuresTool({
+    backendUrl: "http://127.0.0.1:19999",
+    fetchImpl: stubFetch,
+  });
 
   try {
-    const result = spawnSync(
-      "node",
-      [
-        "dist/cli/runDisclosureTrigger.js",
-        "--source",
-        "user",
-        "--keyword",
-        "카카오",
-        "--trace-id",
-        "cli-trace"
-      ],
-      {
-        cwd: process.cwd(),
-        encoding: "utf-8",
-        env: {
-          ...process.env,
-          PYTHON_BIN: scriptPath,
-          GONGSIRI_CHECKPOINT_PATH: checkpointPath
-        }
-      }
+    const result = await runTriggeredDisclosureCheck(
+      createDisclosureTriggerRequest({
+        source: "user",
+        keyword: "카카오",
+        traceId: "cli-trace",
+      }),
+      { checkpointStore, tool },
     );
 
-    assert.equal(result.status, 0);
-    const parsed = JSON.parse(result.stdout.trim());
-    assert.equal(parsed.ok, true);
-    assert.equal(parsed.triggerSource, "user");
-    assert.equal(parsed.traceId, "cli-trace");
-    assert.equal(parsed.hasNewDisclosure, false);
+    // Verify the HTTP path was taken: correct URL, method, and body
+    assert.equal(capturedUrl, "http://127.0.0.1:19999/internal/disclosures");
+    assert.equal(capturedMethod, "POST");
+    assert.equal(capturedBody?.keyword, "카카오");
+    assert.equal(capturedBody?.traceId, "cli-trace");
+
+    // Verify typed trigger envelope
+    assert.equal(result.ok, true);
+    assert.equal(result.triggerSource, "user");
+    assert.equal(result.traceId, "cli-trace");
+    assert.equal(result.hasNewDisclosure, false);
+
+    // Verify checkpoint write
     assert.equal(existsSync(checkpointPath), true);
     assert.equal(
       JSON.parse(readFileSync(checkpointPath, "utf-8")).disclosures["00258801"],
-      "202605200010"
+      "202605200010",
     );
   } finally {
-    cleanup();
-    rmSync(checkpointPath.replace(/\/checkpoints\.json$/, ""), { recursive: true, force: true });
+    rmSync(checkpointPath.replace(/\/checkpoints\.json$/, ""), {
+      recursive: true,
+      force: true,
+    });
   }
 });
 
@@ -398,11 +477,19 @@ test("first cron run initializes checkpoint without downstream pipeline surface"
   const checkpointStore = new LocalDisclosureCheckpointStore(checkpointPath);
 
   const result = await runTriggeredDisclosureCheck(
-    createDisclosureTriggerRequest({ source: "cron", keyword: "카카오", traceId: "first-cron" }),
+    createDisclosureTriggerRequest({
+      source: "cron",
+      keyword: "카카오",
+      traceId: "first-cron",
+    }),
     {
       checkpointStore,
       tool: {
-        descriptor: { name: "fetch_disclosures", description: "stub", canonicalCommand: "stub" },
+        descriptor: {
+          name: "fetch_disclosures",
+          description: "stub",
+          canonicalCommand: "stub",
+        },
         invoke: async () => ({
           ok: true,
           traceId: "first-cron",
@@ -412,14 +499,22 @@ test("first cron run initializes checkpoint without downstream pipeline surface"
             corpCode: "00258801",
             company: null,
             disclosures: [
-              { rcept_no: "202605200002", report_nm: "사업보고서", rcept_dt: "20260520" },
-              { rcept_no: "202605200001", report_nm: "분기보고서", rcept_dt: "20260520" }
-            ]
+              {
+                rcept_no: "202605200002",
+                report_nm: "사업보고서",
+                rcept_dt: "20260520",
+              },
+              {
+                rcept_no: "202605200001",
+                report_nm: "분기보고서",
+                rcept_dt: "20260520",
+              },
+            ],
           },
-          evidence: []
-        })
-      }
-    }
+          evidence: [],
+        }),
+      },
+    },
   );
 
   assert.equal(result.ok, true);
@@ -432,11 +527,19 @@ test("subsequent cron run with new disclosures still reports canonical ids", asy
   checkpointStore.write("00258801", "202605200002");
 
   const result = await runTriggeredDisclosureCheck(
-    createDisclosureTriggerRequest({ source: "cron", keyword: "카카오", traceId: "cron-new" }),
+    createDisclosureTriggerRequest({
+      source: "cron",
+      keyword: "카카오",
+      traceId: "cron-new",
+    }),
     {
       checkpointStore,
       tool: {
-        descriptor: { name: "fetch_disclosures", description: "stub", canonicalCommand: "stub" },
+        descriptor: {
+          name: "fetch_disclosures",
+          description: "stub",
+          canonicalCommand: "stub",
+        },
         invoke: async () => ({
           ok: true,
           traceId: "cron-new",
@@ -446,14 +549,22 @@ test("subsequent cron run with new disclosures still reports canonical ids", asy
             corpCode: "00258801",
             company: null,
             disclosures: [
-              { rcept_no: "202605200003", report_nm: "신규 공시", rcept_dt: "20260520" },
-              { rcept_no: "202605200002", report_nm: "사업보고서", rcept_dt: "20260520" }
-            ]
+              {
+                rcept_no: "202605200003",
+                report_nm: "신규 공시",
+                rcept_dt: "20260520",
+              },
+              {
+                rcept_no: "202605200002",
+                report_nm: "사업보고서",
+                rcept_dt: "20260520",
+              },
+            ],
           },
-          evidence: []
-        })
-      }
-    }
+          evidence: [],
+        }),
+      },
+    },
   );
 
   assert.equal(result.ok, true);
@@ -466,11 +577,19 @@ test("manual user trigger no longer exposes agent-side pipeline execution", asyn
   checkpointStore.write("00258801", "202605200010");
 
   const result = await runTriggeredDisclosureCheck(
-    createDisclosureTriggerRequest({ source: "user", keyword: "카카오", traceId: "manual-no-new" }),
+    createDisclosureTriggerRequest({
+      source: "user",
+      keyword: "카카오",
+      traceId: "manual-no-new",
+    }),
     {
       checkpointStore,
       tool: {
-        descriptor: { name: "fetch_disclosures", description: "stub", canonicalCommand: "stub" },
+        descriptor: {
+          name: "fetch_disclosures",
+          description: "stub",
+          canonicalCommand: "stub",
+        },
         invoke: async () => ({
           ok: true,
           traceId: "manual-no-new",
@@ -480,13 +599,17 @@ test("manual user trigger no longer exposes agent-side pipeline execution", asyn
             corpCode: "00258801",
             company: null,
             disclosures: [
-              { rcept_no: "202605200010", report_nm: "사업보고서", rcept_dt: "20260520" }
-            ]
+              {
+                rcept_no: "202605200010",
+                report_nm: "사업보고서",
+                rcept_dt: "20260520",
+              },
+            ],
           },
-          evidence: []
-        })
-      }
-    }
+          evidence: [],
+        }),
+      },
+    },
   );
 
   assert.equal(result.ok, true);
