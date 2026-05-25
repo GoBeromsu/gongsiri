@@ -199,3 +199,19 @@ Rules: `frontend → backend` allowed; `backend → agent` allowed;
 ## G010 Narrative Migration Note
 
 As of G010, backend analyzer ownership is narrowed to deterministic scoring, evidence mapping, and preparation DTOs. Report narrative, Q&A prose, and checklist explanation prose belong to the 공시리 agent modes (`report`, `qa`, `checklist_explanation`) over normalized backend facts. Legacy `backend/analyzer/solar_step*.py` prompt modules are retained only as historical/compatibility artifacts until later cleanup removes them entirely.
+
+## G010 Cleanup Record
+
+`backend/analyzer/solar_step1.py` 의 `chat_json` LLM 호출 및 `_enrich_with_explanations`
+가 제거됨 (브랜치 `feature/C-step1-explanation-takeover`, 2026-05-25). 동시에
+`backend/analyzer/solar_client.py`, `backend/analyzer/prompts/step1.py` 삭제.
+
+결정적 채점 (`build_checklist` / `calculate_risk_score` / `classify_risk_level`) 은 유지된다.
+체크리스트 항목 설명(prose)의 단일 생성 경로:
+
+1. backend `run_step1` → `solar_explanation = ""` 초기화 (schema default)
+2. `attach_agent_report` → `explain_checklist_with_agent`
+3. agent `gongsiri-checklist-explanation` skill 실행
+4. `merge_checklist_explanations` → `solar_explanation` 채움
+
+backend 는 LLM 으로 prose 를 직접 생성하지 않는다 (G010).
