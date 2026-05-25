@@ -1,23 +1,47 @@
 # Python
 __pycache__/
 *.py[cod]
-
-# Virtual environment
+.ruff_cache/
+.pytest_cache/
 venv/
+.venv/
 
-# Environment variables
+# Node / Next.js
+node_modules/
+.next/
+dist/
+build/
+coverage/
+
+# Env / secrets
 .env
+.env.local
+.env.*.local
+.env.zip
+*.env.zip
 
-# VSCode
+# Editors / OS
 .vscode/
-
-# OS
+.idea/
 .DS_Store
 
-# Cache
-data/price_cache/
-
-# Large / generated outputs
-data/normalized_data_bundle.json
-data/reports/
+# Runtime cache / generated outputs
+output/
+data/
 *.log
+lefthook-local.yml
+
+# Agent state — local only; root .omc/wiki/ is the team-shared exception
+/.omc/*
+!/.omc/wiki/
+!/.omc/wiki/**
+*/.omc/
+*/*/.omc/
+*/*/*/.omc/
+.omx/
+.clawhip/
+.openchrome/
+uv.lock
+
+# Makefile runtime state (PID/log files)
+.pids/

@@ -1,0 +1,27 @@
+{
+  "name": "@gongsiri/pi-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.13.1",
+  "description": "Top-level Pi runtime skeleton for the Gongsiri Pi bootstrap milestone.",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "npm run build && node --test test/**/*.test.mjs",
+    "start": "node dist/server.js",
+    "trigger": "npm run build && node dist/cli/runDisclosureTrigger.js",
+    "solar-chat": "npm run build && node dist/cli/runSolarChat.js",
+    "serve": "npm run build && node dist/server.js",
+    "dev:serve": "npm run build && node dist/server.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@earendil-works/pi-coding-agent": "^0.75.4"
+  }
+}

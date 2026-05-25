@@ -1,0 +1,33 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+:root {
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #4a4a4a;
+  --color-text-tertiary: #8a8a8a;
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f4f6fa;
+  --color-border-primary: #c8d0e0;
+  --color-border-secondary: #d8dff0;
+  --color-border-tertiary: #e8ecf4;
+  --radius-lg: 12px;
+  --radius-md: 8px;
+  --color-navy: #0a0f1c;
+  --color-blue: #3b8bff;
+  --color-red: #e24b4a;
+  --color-amber: #ba7517;
+  --color-green: #639922;
+  --color-gray: #5f5e5a;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans KR', sans-serif;
+  letter-spacing: -0.03em;
+  color: var(--color-text-primary);
+  background: var(--color-bg-secondary);
+}
+
+.font-display { font-family: 'Bebas Neue', sans-serif; letter-spacing: -0.07em; }
+.font-mono    { font-family: 'IBM Plex Mono', monospace; letter-spacing: 0; }

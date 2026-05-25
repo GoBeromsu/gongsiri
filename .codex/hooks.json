@@ -1,0 +1,14 @@
+{
+  "hooks": [
+    {
+      "event": "PreToolUse",
+      "command": "bash .claude/hooks/guard-protected-branch.sh",
+      "comment": "Matcher-less: guard script self-filters stdin for git commit/push/merge/rebase, exit 2 = block. Shares .claude/hooks/guard-protected-branch.sh with Claude Code — no logic duplication."
+    },
+    {
+      "event": "SessionStart",
+      "command": "bash -c 'echo \"=== gongsiri 협업 규칙 요약 ===\"; echo \"브랜치: feature/<owner>-<scope> | PR → dev | Conventional Commit\"; echo \"규칙 전문: docs/rules/code-style.md · version-control.md · change-management.md\"; echo \"main/dev 직접 commit/push/merge 금지\"'",
+      "comment": "SessionStart: prints a compact docs/rules/ pointer into Codex context — same rule awareness as Claude Code's AGENTS.md, without re-reading every rule file."
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import os
+
 import requests
 from dotenv import load_dotenv
 
@@ -6,7 +7,9 @@ from backend.schemas.bundle import DisclosureItem, FinancialData
 
 load_dotenv()
 
-DART_API_KEY = os.getenv("DART_API_KEY")
+
+def get_dart_api_key() -> str | None:
+    return os.getenv("DART_API_KEY")
 
 
 def get_disclosure_url(rcept_no: str) -> str:
@@ -74,13 +77,15 @@ def fetch_disclosures(
     end_de: str = "20241231",
     page_count: int = 20,
 ) -> list[DisclosureItem]:
-    if not DART_API_KEY:
+    api_key = get_dart_api_key()
+
+    if not api_key:
         raise ValueError("DART_API_KEY가 .env에 없습니다.")
 
     url = "https://opendart.fss.or.kr/api/list.json"
 
     params = {
-        "crtfc_key": DART_API_KEY,
+        "crtfc_key": api_key,
         "corp_code": corp_code,
         "bgn_de": bgn_de,
         "end_de": end_de,
@@ -96,9 +101,7 @@ def fetch_disclosures(
     data = response.json()
 
     if data.get("status") != "000":
-        raise RuntimeError(
-            f"OpenDART API error: {data.get('status')} / {data.get('message')}"
-        )
+        raise RuntimeError(f"OpenDART API error: {data.get('status')} / {data.get('message')}")
 
     disclosures = []
 
@@ -120,7 +123,11 @@ def fetch_disclosures(
     return disclosures
 
 
-def fetch_financials(corp_code: str, bsns_year: str = "2024", reprt_code: str = "11013") -> FinancialData:
+def fetch_financials(
+    corp_code: str,
+    bsns_year: str = "2024",
+    reprt_code: str = "11013",
+) -> FinancialData:
     """
     OpenDART 단일회사 주요계정 API로 주요 재무정보 수집.
     reprt_code:
@@ -129,13 +136,15 @@ def fetch_financials(corp_code: str, bsns_year: str = "2024", reprt_code: str = 
     - 11013: 1분기보고서
     - 11014: 3분기보고서
     """
-    if not DART_API_KEY:
+    api_key = get_dart_api_key()
+
+    if not api_key:
         raise ValueError("DART_API_KEY가 .env에 없습니다.")
 
     url = "https://opendart.fss.or.kr/api/fnlttSinglAcnt.json"
 
     params = {
-        "crtfc_key": DART_API_KEY,
+        "crtfc_key": api_key,
         "corp_code": corp_code,
         "bsns_year": bsns_year,
         "reprt_code": reprt_code,
@@ -154,31 +163,38 @@ def fetch_financials(corp_code: str, bsns_year: str = "2024", reprt_code: str = 
             market_cap=None,
         )
 
-    revenue = None
-    operating_income = None
-    equity = None
+    # CFS(연결재무제표) 우선, 없으면 OFS(개별재무제표) 사용
+    # key: account_nm → {"CFS": amount, "OFS": amount}
+    candidates: dict[str, dict[str, float]] = {}
 
     for item in data.get("list", []):
         account_nm = item.get("account_nm", "")
+        fs_div = item.get("fs_div", "")
         amount_raw = item.get("thstrm_amount", "")
+
+        if account_nm not in ("매출액", "영업이익", "자본총계"):
+            continue
 
         try:
             amount = float(amount_raw.replace(",", ""))
-        except ValueError:
+        except (ValueError, AttributeError):
             continue
 
-        if account_nm == "매출액":
-            revenue = amount
+        if account_nm not in candidates:
+            candidates[account_nm] = {}
+        candidates[account_nm][fs_div] = amount
 
-        elif account_nm == "영업이익":
-            operating_income = amount
-
-        elif account_nm == "자본총계":
-            equity = amount
+    def pick(account_nm: str) -> float | None:
+        row = candidates.get(account_nm, {})
+        if "CFS" in row:
+            return row["CFS"]
+        if "OFS" in row:
+            return row["OFS"]
+        return None
 
     return FinancialData(
-        revenue=revenue,
-        operating_income=operating_income,
-        equity=equity,
+        revenue=pick("매출액"),
+        operating_income=pick("영업이익"),
+        equity=pick("자본총계"),
         market_cap=None,
     )

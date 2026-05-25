@@ -1,15 +1,15 @@
 import json
 from pathlib import Path
 
-from backend.schemas.bundle import NormalizedDataBundle
-from backend.collector.krx.search import search_stock
-from backend.collector.krx.trade_info import get_trade_info
 from backend.collector.dart import fetch_disclosures, fetch_financials
-from backend.collector.naver.news import fetch_news_docs
 from backend.collector.dart_parser import parse_dart_reports
 from backend.collector.document_parse import parse_local_report_files
-from backend.collector.report_finder import search_report_urls
+from backend.collector.krx.search import search_stock
+from backend.collector.krx.trade_info import get_trade_info
+from backend.collector.naver.news import fetch_news_docs
 from backend.collector.report_downloader import download_pdf_reports_from_candidates
+from backend.collector.report_finder import search_report_urls
+from backend.schemas.bundle import NormalizedDataBundle
 
 
 def is_valid_pdf_file(file_path: str) -> bool:
@@ -69,11 +69,7 @@ def filter_successful_parsed_reports(parsed_reports):
     """
     Upstage 실패 결과는 B팀 입력에서 제외한다.
     """
-    return [
-        report
-        for report in parsed_reports
-        if not report.source.startswith("UPSTAGE_ERROR")
-    ]
+    return [report for report in parsed_reports if not report.source.startswith("UPSTAGE_ERROR")]
 
 
 def build_normalized_bundle(keyword: str) -> NormalizedDataBundle:

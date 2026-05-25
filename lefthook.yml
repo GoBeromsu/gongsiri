@@ -1,0 +1,45 @@
+# lefthook - gongsiri git hooks.
+# Install once after clone: lefthook install
+# Bypass (emergency only):  git commit --no-verify  /  git push --no-verify
+
+pre-commit:
+  parallel: true
+  commands:
+    py-lint:
+      glob: "*.py"
+      run: ruff check --fix {staged_files} && ruff format {staged_files}
+      stage_fixed: true
+    js-lint:
+      glob: "frontend/**/*.{js,jsx,mjs,cjs,ts,tsx}"
+      # frontend 범위 파일만 처리 — agent/ 등 다른 TS 패키지는 각자 린트
+      run: |
+        if [ -f frontend/package.json ] && [ -d frontend/node_modules ]; then
+          pnpm --dir frontend exec eslint --fix --no-error-on-unmatched-pattern {staged_files}
+        else
+          echo "lefthook: eslint skipped (frontend not initialized)"
+        fi
+      stage_fixed: true
+    js-prettier:
+      glob: "*.{js,jsx,mjs,cjs,ts,tsx,json,md}"
+      # frontend/node_modules/.bin/prettier 를 직접 호출 — repo 루트 기준 경로가 그대로 전달된다.
+      run: |
+        if [ -x frontend/node_modules/.bin/prettier ]; then
+          frontend/node_modules/.bin/prettier --write {staged_files}
+        else
+          echo "lefthook: prettier skipped (frontend not initialized)"
+        fi
+      stage_fixed: true
+
+pre-push:
+  commands:
+    block-protected-branch:
+      run: |
+        branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+        case "$branch" in
+          main|dev)
+            echo "[lefthook] BLOCKED: push from protected branch '$branch'." >&2
+            echo "  Rule: gongsiri convention forbids direct push to main/dev." >&2
+            echo "  Action: branch off as feature/<owner>-<scope> and open a PR." >&2
+            exit 1
+            ;;
+        esac
