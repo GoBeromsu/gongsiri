@@ -1,17 +1,13 @@
-import type { AnalysisResultPayload } from "../contracts/pipeline.js";
-
 const REPORTS_CLIENT_CONTRACT_VERSION = "v1";
 const BACKEND_BASE_URL =
   process.env.AGENT_BACKEND_URL ?? "http://127.0.0.1:8000";
 const REPORTS_ENDPOINT = `${BACKEND_BASE_URL}/api/v1/reports`;
-const REQUEST_TIMEOUT_MS = 15_000;
+const REQUEST_TIMEOUT_MS = 30_000;
 
-export type ReportsPushInput = {
+export type ReportRefreshInput = {
   corpCode?: string;
   keyword?: string;
   traceId: string;
-  analysisResult: AnalysisResultPayload;
-  prose: string;
 };
 
 const doFetch = (payload: Record<string, unknown>): Promise<Response> => {
@@ -27,15 +23,15 @@ const doFetch = (payload: Record<string, unknown>): Promise<Response> => {
   });
 };
 
-export const pushReport = async (input: ReportsPushInput): Promise<void> => {
+export const requestReportRefresh = async (
+  input: ReportRefreshInput,
+): Promise<void> => {
   const payload: Record<string, unknown> = {
     view: "report-detail",
     contractVersion: REPORTS_CLIENT_CONTRACT_VERSION,
     source: "cron",
     traceId: input.traceId,
-    forceRefresh: false,
-    analysisResult: input.analysisResult,
-    prose: input.prose,
+    forceRefresh: true,
   };
   if (input.corpCode) payload.corpCode = input.corpCode;
   if (input.keyword) payload.keyword = input.keyword;
@@ -69,4 +65,4 @@ export const pushReport = async (input: ReportsPushInput): Promise<void> => {
   }
 };
 
-export const reportsClient = { push: pushReport };
+export const reportsClient = { requestRefresh: requestReportRefresh };
