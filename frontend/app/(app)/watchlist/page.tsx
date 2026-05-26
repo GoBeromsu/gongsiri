@@ -3,6 +3,7 @@ import Topbar from "@/components/layout/Topbar";
 import RiskBadge from "@/components/ui/RiskBadge";
 import RiskProgressBar from "@/components/ui/RiskProgressBar";
 import AddStockButton from "./_components/AddStockButton";
+import CheckButton from "./_components/CheckButton";
 
 interface WatchlistItemData {
   corp_code: string;
@@ -154,7 +155,7 @@ export default async function WatchlistPage() {
                 />
                 <RiskBadge level="normal" size="sm" />
                 <RiskProgressBar score={0} level="normal" />
-                <CheckButtonSlot corpCode={item.corp_code} />
+                <CheckButton corpCode={item.corp_code} />
                 <DeleteButton corpCode={item.corp_code} />
               </div>
             ))
