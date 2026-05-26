@@ -41,6 +41,7 @@ export default function WatchlistPage() {
   const [prices, setPrices] = useState<
     Map<string, { price: number | null; change_rate: number | null }>
   >(new Map());
+  const [filterQuery, setFilterQuery] = useState("");
 
   const refresh = useCallback(() => {
     loadWatchlist().then(setWatchlist);
@@ -50,9 +51,18 @@ export default function WatchlistPage() {
     refresh();
   }, [refresh]);
 
+  const filteredWatchlist = filterQuery.trim()
+    ? watchlist.filter(
+        (item) =>
+          item.name.includes(filterQuery) ||
+          item.corp_name?.includes(filterQuery) ||
+          item.stock_code.includes(filterQuery),
+      )
+    : watchlist;
+
   return (
     <div>
-      <Topbar title="워치리스트" />
+      <Topbar title="워치리스트" onSearchChange={setFilterQuery} />
       <div style={{ padding: 16 }}>
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
           <AddStockButton onAdded={refresh} />
@@ -104,7 +114,7 @@ export default function WatchlistPage() {
               </span>
             ))}
           </div>
-          {watchlist.length === 0 ? (
+          {filteredWatchlist.length === 0 ? (
             <div
               style={{
                 padding: "28px 16px",
@@ -114,10 +124,12 @@ export default function WatchlistPage() {
                 letterSpacing: "-0.02em",
               }}
             >
-              등록된 워치리스트 종목이 없습니다.
+              {watchlist.length === 0
+                ? "등록된 워치리스트 종목이 없습니다."
+                : "검색 결과가 없습니다."}
             </div>
           ) : (
-            watchlist.map((item) => (
+            filteredWatchlist.map((item) => (
               <div
                 key={item.corp_code}
                 style={{
