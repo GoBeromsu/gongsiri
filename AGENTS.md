@@ -19,7 +19,7 @@ gongsiri/
 └── AGENTS.md / CLAUDE.md / README.md
 ```
 
-> 런타임 데이터는 `.gitignore`된 `data/`에 A의 collector가 자동 생성되며, Pi/OMX 로컬 상태는 `.clawhip/`, `.openchrome/`, `.omc/`, `.omx/`에만 남긴다.
+> 런타임 데이터의 SoT는 `.gitignore`된 `data/dev.sqlite` (SQLite file mode). dev fixture는 부팅 시 `backend/fixtures/dev_seed.json`에서 upsert된다. Supabase(Postgres) 이행 시 schema/repository 패턴을 그대로 옮긴다. `data/*.json` 형태의 별도 store는 더 이상 만들지 말 것. Pi/OMX 로컬 상태는 `.clawhip/`, `.openchrome/`, `.omc/`, `.omx/`에만 남긴다.
 
 ## 사람 담당 (A / B / C)
 
@@ -92,6 +92,7 @@ cd frontend && npm run dev -- --hostname 127.0.0.1 --port 3000
 
 1. **항상 `docs/`를 먼저 읽고 코드를 짠다** — 인터페이스·스키마·기능 ID 모두 `docs/`가 SoT. 모호 시 `assets/공시리 기획서.pdf`.
 2. **브랜치**: `feature/<owner>-<scope>` (예: `feature/A-collector-dart`). PR 타겟은 항상 `dev`.
+   PR 단위 = 도메인 단위 (front+backend 한 PR, 기능 단위).
 3. **main·dev 직접 push 금지** — Claude PreToolUse hook + lefthook pre-push + GitHub branch protection 3중 차단.
 4. **commit**: `/commit` 스킬 사용 권장. Conventional Commits `<type>(<scope>): <summary>`, 7 types: `feat | fix | docs | chore | refactor | test | style`.
 5. **인터페이스 변경**: A↔B↔C 스키마 수정은 PR + 팀 합의 + `docs/03-interface-schema.md` 갱신 필수.
