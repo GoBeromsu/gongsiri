@@ -101,9 +101,12 @@ export default function WatchlistPage() {
 
   useEffect(() => {
     if (watchlist.length === 0) return;
-    refreshPrices(watchlist);
+    const initial = setTimeout(() => refreshPrices(watchlist), 0);
     const id = setInterval(() => refreshPrices(watchlist), 30_000);
-    return () => clearInterval(id);
+    return () => {
+      clearTimeout(initial);
+      clearInterval(id);
+    };
   }, [watchlist, refreshPrices]);
 
   const filteredWatchlist = filterQuery.trim()
