@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { stockCode: string } },
+  { params }: { params: Promise<{ stockCode: string }> },
 ) {
-  const { stockCode } = params;
+  const { stockCode } = await params;
   const market = req.nextUrl.searchParams.get("market") ?? "KOSPI";
   const apiBase =
     process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";

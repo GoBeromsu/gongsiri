@@ -38,12 +38,12 @@ app.include_router(dev_auth_router)
 app.include_router(dev_data_router)
 app.include_router(disclosure_check_router)
 app.include_router(disclosure_router)
+app.include_router(stocks_router)
 app.include_router(external_api_router)
 app.include_router(pipeline_router)
 app.include_router(qa_router)
 app.include_router(quote_router)
 app.include_router(report_cache_router)
-app.include_router(stocks_router)
 app.include_router(watchlist_router)
 
 

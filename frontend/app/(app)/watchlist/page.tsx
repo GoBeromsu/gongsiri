@@ -45,10 +45,8 @@ function PriceRefreshSlot(_: PriceRefreshSlotProps) {
 }
 
 async function fetchWatchlist(): Promise<WatchlistItemData[]> {
-  const apiBase =
-    process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
   try {
-    const res = await fetch(`${apiBase}/api/watchlist`, { cache: "no-store" });
+    const res = await fetch(`/api/watchlist`, { cache: "no-store" });
     if (!res.ok) return [];
     const data = await res.json();
     return Array.isArray(data.items) ? data.items : [];

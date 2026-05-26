@@ -1,6 +1,10 @@
+import logging
+
 from fastapi import APIRouter
 
-from backend.collector.krx.search import find_in_local_master
+from backend.collector.krx.search import resolve_companies
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/stocks")
 
@@ -10,17 +14,19 @@ def search_stocks(q: str = ""):
     if not q.strip():
         return {"items": []}
 
-    result = find_in_local_master(q)
-    if result is None:
-        return {"items": []}
+    logger.info("종목 검색 요청: q=%s", q)
+    companies = resolve_companies(q)
 
-    return {
-        "items": [
-            {
-                "corp_code": result.corp_code,
-                "stock_code": result.stock_code,
-                "corp_name": result.corp_name,
-                "market": result.market,
-            }
-        ]
-    }
+    items = [
+        {
+            "corp_code": c.corp_code,
+            "stock_code": c.stock_code,
+            "corp_name": c.corp_name,
+            "market": c.market,
+        }
+        for c in companies
+        if c.corp_code  # corp_code null 항목 제외
+    ]
+
+    logger.info("종목 검색 결과: q=%s, count=%d", q, len(items))
+    return {"items": items}
