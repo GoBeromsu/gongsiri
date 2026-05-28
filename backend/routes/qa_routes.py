@@ -7,7 +7,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
 
-from backend.agent_client import AgentServiceError
+from backend.agent_client import AgentServiceError, stdout_trace
 from backend.agent_service import agent_failure_envelope, answer_qa_with_agent
 from backend.analyzer.pipeline import CONTRACT_VERSION
 from backend.analyzer.qa import analyze_bundle
@@ -76,6 +76,7 @@ async def qa_route(request: Request):
     try:
         payload, _empty_body = await read_json_object(request)
         question, corp_code, keyword = _resolve_qa_request(payload)
+        stdout_trace("qa", f"view=qa corp={corp_code or keyword or '-'} mode=qa cache=miss")
         user_id = resolve_dev_user_id()
         bundle = await run_in_threadpool(
             build_runtime_normalized_bundle,

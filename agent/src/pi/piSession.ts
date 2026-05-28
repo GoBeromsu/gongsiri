@@ -223,6 +223,17 @@ export const runPiSession = async (
   const toolTraces: TraceLogEntry[] = [];
   const abortController = new AbortController();
 
+  const traceEnabled =
+    (process.env.GONGSIRI_TRACE_STDOUT ?? "true").toLowerCase() !== "0" &&
+    (process.env.GONGSIRI_TRACE_STDOUT ?? "true").toLowerCase() !== "false" &&
+    (process.env.GONGSIRI_TRACE_STDOUT ?? "true").toLowerCase() !== "off";
+  const tracePrefix = `pi:${promptCtx?.mode ?? "run"}:${(promptCtx?.traceId ?? "--------").slice(0, 8)}`;
+  const traceLog = (msg: string) => {
+    if (traceEnabled) console.log(`[${tracePrefix}] ${msg}`);
+  };
+
+  const sessionStartMs = Date.now();
+
   const unsubscribe = session.subscribe((event: unknown) => {
     const candidate = event as {
       type?: string;
@@ -232,11 +243,14 @@ export const runPiSession = async (
         toolName?: string;
         latencyMs?: number;
         status?: string;
+        input?: Record<string, unknown>;
+        output?: unknown;
       }>;
     };
 
     if (candidate.type === "turn_start") {
       currentTurnText = "";
+      traceLog(`turn ${turnCount + 1} start`);
     }
 
     if (
@@ -254,6 +268,15 @@ export const runPiSession = async (
 
       if (candidate.toolResults) {
         for (const tr of candidate.toolResults) {
+          const paramKeys = tr.input
+            ? `{${Object.keys(tr.input).join(", ")}}`
+            : "{}";
+          traceLog(`tool_call ${tr.toolName ?? "unknown"}(${paramKeys})`);
+          const outputLen =
+            tr.output != null ? JSON.stringify(tr.output).length : 0;
+          traceLog(
+            `tool_result ok=${tr.status === "success"} (${outputLen} bytes)`,
+          );
           toolTraces.push({
             turn: turnCount,
             toolName: tr.toolName ?? "unknown",
@@ -263,6 +286,7 @@ export const runPiSession = async (
         }
       }
 
+      traceLog(`turn ${turnCount + 1} end`);
       turnCount++;
       if (turnCount >= MAX_TURNS) {
         abortController.abort();
@@ -283,6 +307,9 @@ export const runPiSession = async (
     ]);
 
     if (raceResult.timedOut) {
+      traceLog(
+        `done turns=${turnCount} elapsed=${Date.now() - sessionStartMs}ms TIMEOUT`,
+      );
       return {
         text: "",
         model: `${PROVIDER}/${modelId}`,
@@ -291,6 +318,9 @@ export const runPiSession = async (
       };
     }
 
+    traceLog(
+      `done turns=${turnCount} elapsed=${Date.now() - sessionStartMs}ms`,
+    );
     const stripped = stripNonJsonPrefix(finalText.trim());
     return {
       text: stripped || finalText.trim(),
