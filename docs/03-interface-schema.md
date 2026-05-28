@@ -316,6 +316,41 @@ Rules:
 - typed degraded/unavailable states are part of the contract, not exceptional hidden behavior;
 - k-skill remains a distillation reference only, not a shipped dependency.
 
+## Agent-Path Report Output Contract (2026-05-28)
+
+`GONGSIRI_AGENT_REPORT_MODE=true` + cache miss 시 agent tool-loop가 실행되며,
+결과는 `save_agent_path_report()` → `detail_view_from_report_row()` 를 거쳐
+아래 형태로 frontend에 반환된다.
+
+```ts
+// agent tool-loop 최종 turn JSON (SKILL.md 출력 계약)
+type AgentReportFinalTurn = {
+  shortTermMarkdown: string;
+  longTermMarkdown: string;
+  disclaimerMarkdown: string;
+};
+
+// backend detail_view_from_report_row() 반환 (ReportDetailResponse 형태 유지)
+type AgentPathReportDetail = {
+  ok: true;
+  report: {
+    shortTermReport: string; // ← shortTermMarkdown 매핑
+    longTermReport: string; // ← longTermMarkdown 매핑
+    disclaimerMarkdown: string;
+    // 나머지 ReportDetailResponse 필드는 deterministic backend truth
+  };
+  evidence: Array<Record<string, unknown>>; // tool trace entries
+  warnings: string[];
+};
+```
+
+규칙:
+
+- SKILL.md final turn JSON 키: 정확히 `shortTermMarkdown`, `longTermMarkdown`, `disclaimerMarkdown` 3개. 다른 이름 금지.
+- `detail_view_from_report_row()`는 위 3개 키를 snake_case 필드(`short_term_report`, `long_term_report`)로 매핑한다.
+- HTTP 계약 `{view:"report-detail", corpCode}` 및 `resolve_report_view()` 미변경.
+- cache hit 시 agent tool-loop 우회; agent failure 시 fake success row 저장 금지.
+
 ## G010 Narrative Ownership Boundary
 
 Backend analyzer truth after G010:

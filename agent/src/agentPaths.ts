@@ -28,10 +28,8 @@ export const resolveAgentRoot = (): string => {
   return nodePath.resolve(currentDir, "..");
 };
 
-/**
- * 지정한 skill 이름에 해당하는 SKILL.md 경로를 반환한다.
- */
-export const resolveSkillPath = (skillName: string): string => {
-  const root = resolveAgentRoot();
-  return nodePath.join(root, ".pi", "skills", skillName, "SKILL.md");
-};
+export const resolvePromptPath = (filename: string): string =>
+  nodePath.join(resolveAgentRoot(), ".pi", "prompts", filename);
+
+export const resolveSkillPath = (skillName: string): string =>
+  nodePath.join(resolveAgentRoot(), ".pi", "skills", skillName, "SKILL.md");

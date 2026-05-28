@@ -1,6 +1,16 @@
 ---
 title: "gongsiri 에이전트 HTTP + Pi SDK 전환 결정"
-tags: ["gongsiri", "agent", "pi-sdk", "architecture", "http", "decision", "report", "qa"]
+tags:
+  [
+    "gongsiri",
+    "agent",
+    "pi-sdk",
+    "architecture",
+    "http",
+    "decision",
+    "report",
+    "qa",
+  ]
 created: 2026-05-21T13:21:51.667Z
 updated: 2026-05-21T13:21:51.667Z
 sources: []
@@ -29,7 +39,7 @@ report·QA 경로를 에이전트와 연결하는 방법을 논의. 기존 `docs
 - Pi SDK(`@earendil-works/pi-coding-agent`)는 Node/TS SDK. npm 공개, MIT, Node ≥22.19.
 - Pi SDK는 Upstage Solar를 **커스텀 프로바이더**로 지원: `models.json`에
   `baseUrl: https://api.upstage.ai/v1`, `api: openai-completions`, model `solar-pro`.
-- Pi SDK는 *코딩* 에이전트 — report+QA 단발 호출엔 `noTools: "all"` 필요.
+- Pi SDK는 _코딩_ 에이전트 — report+QA 단발 호출엔 `noTools: "all"` 필요.
 
 ## 결정
 
@@ -39,7 +49,9 @@ report·QA 경로를 에이전트와 연결하는 방법을 논의. 기존 `docs
 3. **백엔드 서비스 계층이 에이전트를 내부 HTTP로 호출.** 에이전트는 컨트롤러 아래,
    서비스 계층이 부르는 위치.
 4. **에이전트는 leaf.** 백엔드 HTTP·운영 DB를 절대 안 건드림 → `backend → agent →
-   /pipeline/trigger → backend` 순환 제거.
+/pipeline/trigger → backend` 순환 제거. **단, report 경로에서는 agent가 `noTools: "all"` 없이
+   4개 tool(`run_risk_analysis`, `fetch_disclosure_evidence`, `fetch_trade_info`, `search_news`)을
+   자율 호출하는 tool-loop로 동작한다 (2026-05-28 reversal — 상세는 §2026-05-28 결정 reversal).**
 5. **Option A 분담.** 백엔드가 DART 수집 + 6항목 정량 채점, bundle을 에이전트에 전달.
    에이전트는 Solar 추론 + 리포트 서술/QA 답변 생성. Python analyzer 재포팅 없음.
 
@@ -74,3 +86,43 @@ Frontend ──HTTP──> Backend (FastAPI)
 - A↔B↔C 시임 변경 → `docs/03-interface-schema.md` 갱신 + 팀 합의 후 머지.
 
 관련: [[gongsiri 에이전트 아키텍처]], [[gongsiri §8 자율 동작 갭]]
+
+## 2026-05-28 결정 reversal
+
+**대상:** §결정 bullet 4의 `noTools: "all"` 정책 — report + qa 경로에 대해 reversal됨.
+
+### 배경
+
+이전 결정(2026-05-21)은 report·QA 모두 `noTools: "all"`로 Pi SDK를 단발 호출로만 사용하는 방향이었다.
+그러나 실제 구현 검증 결과, `noTools: "all"` 아래에서는 agent가 tool을 전혀 실행하지 못해
+"진짜 에이전트" 동작이 불가능함이 확인됨. 사용자가 Round 3/4에서 명시적으로
+"agent가 첫 turn에 `run_risk_analysis`를 직접 호출"하는 것을 핵심 변화로 정의함에 따라
+report + qa 경로에 대한 tool-loop 활성화가 결정됨.
+
+### 변경 내용
+
+| 경로                          | 이전                               | 이후                                                                       |
+| ----------------------------- | ---------------------------------- | -------------------------------------------------------------------------- |
+| `POST /report`                | `noTools: "all"` (단발 Solar 서술) | tool-loop: 4개 도구 자율 호출, 최대 5턴, 60초 예산                         |
+| `POST /qa`                    | `noTools: "all"`                   | tool-loop: 5개 도구 자율 호출 (데이터 조회 필요 시만), 최대 5턴, 60초 예산 |
+| `POST /checklist-explanation` | `noTools: "all"`                   | 변경 없음 — strict `noTools: "all"` 유지                                   |
+
+### Report 경로 tool 목록 (4개)
+
+`run_risk_analysis`, `fetch_disclosure_evidence`, `fetch_trade_info`, `search_news`
+
+`fetch_disclosures`는 호환성 유지로 존재하지만 report 경로 registry에 포함하지 않는다.
+
+### QA 경로 tool 목록 (5개)
+
+`fetch_disclosures`, `run_risk_analysis`, `fetch_disclosure_evidence`, `fetch_trade_info`, `search_news`
+
+QA는 사용자 질문에 데이터 조회가 명확히 필요할 때만 tool 호출 — 개념 질문은 바로 답변.
+
+### 가드레일
+
+- 최대 5턴, 10초 per-tool timeout, 60초 전체 예산, 도구 호출 1회 retry
+- Solar narration은 non-final turn에만 허용; **final turn은 반드시 `{`로 시작**
+- GONGSIRI_AGENT_REPORT_MODE=true 일 때만 agent tool-loop 경로 활성화
+
+상세 구현: `docs/06-pi-agent-architecture.md` §ADR-2026-05-28, 계획서 `.omc/plans/agent-tool-loop-report-path.md`

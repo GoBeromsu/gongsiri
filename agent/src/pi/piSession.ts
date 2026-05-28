@@ -7,29 +7,33 @@ import {
   SessionManager,
   SettingsManager,
 } from "@earendil-works/pi-coding-agent";
+import type { ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { resolveAgentRoot } from "../agentPaths.js";
+import { stripNonJsonPrefix } from "../utils/parseHelpers.js";
+import { loadGongsiriSystemPrompt } from "./systemPrompt.js";
+import type { SystemPromptContext } from "./systemPrompt.js";
 
 export const DEFAULT_MODEL = "solar-pro3";
 export const PROVIDER = "upstage";
 
-const systemPrompt = [
-  "당신은 공시리(Gongsiri) Pi agent입니다.",
-  "항상 1인칭 화자로 답하고, 자신을 '공시리'라고 표현하세요.",
-  "예: '저 공시리가 확인한 바로는...', '공시리가 공시와 주식 정보를 함께 보면...'",
-  "한국 상장사 공시 기반 위험 점검 report와 QA를 생성합니다.",
-  "호출자가 제공한 JSON context만 근거로 사용하세요.",
-  "작전주를 확정적으로 예측한다고 말하지 말고 공시 기반 위험 신호로 표현하세요.",
-  "브라우저 데모에 바로 표시할 수 있도록 간결한 한국어 Markdown으로 답하세요.",
-].join("\n");
+export type TraceLogEntry = {
+  turn: number;
+  toolName: string;
+  latencyMs: number;
+  status: string;
+};
 
 export type PiRunResult = {
   text: string;
   model: string;
+  warnings?: string[];
+  toolTraces?: TraceLogEntry[];
 };
 
 export type PiSessionOptions = {
   modelId: string;
   agentDir: string;
+  promptCtx?: SystemPromptContext;
 };
 
 export const requireApiKey = (): string => {
@@ -82,8 +86,23 @@ export type PiSession = Awaited<
   ReturnType<typeof createAgentSession>
 >["session"];
 
+const buildSystemPrompt = (ctx?: SystemPromptContext): string => {
+  if (!ctx) {
+    return loadGongsiriSystemPrompt({
+      mode: "qa",
+      traceId: "bootstrap",
+      contractVersion: "v2",
+      todayDate: new Date().toISOString().slice(0, 10),
+      workingDirectory: process.cwd(),
+    });
+  }
+  return loadGongsiriSystemPrompt(ctx);
+};
+
+// qa/checklist 전용 세션 — noTools: "all" 유지
 export const createPiSession = async (
   options: PiSessionOptions,
+  skillName: string,
 ): Promise<PiSession> => {
   const registry = createRegistry(requireApiKey(), options.modelId);
   const model = registry.find(PROVIDER, options.modelId);
@@ -94,11 +113,21 @@ export const createPiSession = async (
     cwd: process.cwd(),
     agentDir: options.agentDir,
     noExtensions: true,
-    noSkills: true,
     noPromptTemplates: true,
     noThemes: true,
     noContextFiles: true,
-    systemPromptOverride: () => systemPrompt,
+    systemPromptOverride: () => buildSystemPrompt(options.promptCtx),
+    skillsOverride: (current: {
+      skills: Array<{ name: string }>;
+      diagnostics: unknown;
+    }) => {
+      const target = current.skills.find(
+        (s: { name: string }) => s.name === skillName,
+      );
+      if (!target)
+        throw new Error(`SDK가 ${skillName} skill을 발견하지 못했습니다.`);
+      return { skills: [target], diagnostics: current.diagnostics };
+    },
   });
   await loader.reload();
   const { session } = await createAgentSession({
@@ -117,7 +146,13 @@ export const createPiSession = async (
   return session;
 };
 
-export const runPiSession = async (prompt: string): Promise<PiRunResult> => {
+// report/qa/checklist_explanation 공용 — tools 유무에 따라 customTools/noTools 분기
+export const runPiSession = async (
+  prompt: string,
+  skillName: string,
+  tools: ToolDefinition[] = [],
+  promptCtx?: SystemPromptContext,
+): Promise<PiRunResult> => {
   const modelId = process.env.UPSTAGE_MODEL?.trim() || DEFAULT_MODEL;
   const registry = createRegistry(requireApiKey(), modelId);
   const model = registry.find(PROVIDER, modelId);
@@ -125,59 +160,142 @@ export const runPiSession = async (prompt: string): Promise<PiRunResult> => {
     throw new Error("저 공시리가 사용할 답변 모델을 찾지 못했습니다.");
   }
 
-  let text = "";
   const agentRoot = resolveAgentRoot();
   const agentDir = nodePath.join(agentRoot, ".runtime", "pi");
 
-  // SKILL.md 3종은 buildPrompt() 가 직접 읽어 프롬프트에 삽입하므로
-  // Pi 세션 레이어에서는 스킬을 로드하지 않는다 (noSkills: true).
   const loader = new DefaultResourceLoader({
     cwd: process.cwd(),
     agentDir,
     noExtensions: true,
-    noSkills: true,
     noPromptTemplates: true,
     noThemes: true,
     noContextFiles: true,
-    systemPromptOverride: () => systemPrompt,
+    systemPromptOverride: () => buildSystemPrompt(promptCtx),
+    skillsOverride: (current: {
+      skills: Array<{ name: string }>;
+      diagnostics: unknown;
+    }) => {
+      const target = current.skills.find(
+        (s: { name: string }) => s.name === skillName,
+      );
+      if (!target)
+        throw new Error(`SDK가 ${skillName} skill을 발견하지 못했습니다.`);
+      return { skills: [target], diagnostics: current.diagnostics };
+    },
   });
   await loader.reload();
 
-  const { session } = await createAgentSession({
-    model,
-    thinkingLevel: "high",
-    authStorage: registry.authStorage,
-    modelRegistry: registry,
-    resourceLoader: loader,
-    sessionManager: SessionManager.inMemory(),
-    settingsManager: SettingsManager.inMemory({
-      compaction: { enabled: false },
-      retry: { enabled: true, maxRetries: 1 },
-    }),
-    noTools: "all",
-  });
+  const sessionOptions =
+    tools.length > 0
+      ? {
+          model,
+          thinkingLevel: "high" as const,
+          authStorage: registry.authStorage,
+          modelRegistry: registry,
+          resourceLoader: loader,
+          sessionManager: SessionManager.inMemory(),
+          settingsManager: SettingsManager.inMemory({
+            compaction: { enabled: false },
+            retry: { enabled: true, maxRetries: 1 },
+          }),
+          customTools: tools,
+        }
+      : {
+          model,
+          thinkingLevel: "high" as const,
+          authStorage: registry.authStorage,
+          modelRegistry: registry,
+          resourceLoader: loader,
+          sessionManager: SessionManager.inMemory(),
+          settingsManager: SettingsManager.inMemory({
+            compaction: { enabled: false },
+            retry: { enabled: true, maxRetries: 1 },
+          }),
+          noTools: "all" as const,
+        };
+
+  const { session } = await createAgentSession(sessionOptions);
+
+  let currentTurnText = "";
+  let finalText = "";
+  let turnCount = 0;
+  const MAX_TURNS = 5;
+  const toolTraces: TraceLogEntry[] = [];
+  const abortController = new AbortController();
 
   const unsubscribe = session.subscribe((event: unknown) => {
     const candidate = event as {
       type?: string;
       assistantMessageEvent?: { type?: string; delta?: string };
+      message?: string;
+      toolResults?: Array<{
+        toolName?: string;
+        latencyMs?: number;
+        status?: string;
+      }>;
     };
+
+    if (candidate.type === "turn_start") {
+      currentTurnText = "";
+    }
+
     if (
       candidate.type === "message_update" &&
       candidate.assistantMessageEvent?.type === "text_delta" &&
       candidate.assistantMessageEvent.delta
     ) {
-      text += candidate.assistantMessageEvent.delta;
+      currentTurnText += candidate.assistantMessageEvent.delta;
+    }
+
+    if (candidate.type === "turn_end") {
+      // E4 defensive fallback: prefer event.message, fall back to accumulated text
+      finalText = candidate.message || currentTurnText;
+
+      if (candidate.toolResults) {
+        for (const tr of candidate.toolResults) {
+          toolTraces.push({
+            turn: turnCount,
+            toolName: tr.toolName ?? "unknown",
+            latencyMs: tr.latencyMs ?? 0,
+            status: tr.status ?? "unknown",
+          });
+        }
+      }
+
+      turnCount++;
+      if (turnCount >= MAX_TURNS) {
+        abortController.abort();
+      }
     }
   });
 
+  const timeoutPromise = new Promise<{ timedOut: true }>((resolve) =>
+    setTimeout(() => resolve({ timedOut: true }), 60_000),
+  );
+
   try {
-    await session.prompt(prompt, { source: "rpc" });
-    const finalText = text.trim();
-    if (!finalText) {
-      throw new Error("저 공시리가 답변 본문을 받지 못했습니다.");
+    const raceResult = await Promise.race([
+      session
+        .prompt(prompt, { source: "rpc" })
+        .then(() => ({ timedOut: false as const })),
+      timeoutPromise,
+    ]);
+
+    if (raceResult.timedOut) {
+      return {
+        text: "",
+        model: `${PROVIDER}/${modelId}`,
+        warnings: ["agent_timeout_60s"],
+        toolTraces,
+      };
     }
-    return { text: finalText, model: `${PROVIDER}/${modelId}` };
+
+    const stripped = stripNonJsonPrefix(finalText.trim());
+    return {
+      text: stripped || finalText.trim(),
+      model: `${PROVIDER}/${modelId}`,
+      toolTraces,
+    };
   } finally {
     unsubscribe();
     session.dispose();

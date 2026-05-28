@@ -40,7 +40,14 @@ class AgentServiceClient:
         self.timeout = timeout
 
     def generate_report(self, payload: dict[str, Any]) -> dict[str, Any]:
-        return self._post_json("/report", payload)
+        # 60s timeout, 1회 retry on ConnectionError (agent tool-loop은 응답이 느릴 수 있음)
+        for attempt in range(2):
+            try:
+                return self._post_json("/report", payload)
+            except requests.ConnectionError:
+                if attempt == 1:
+                    raise
+        raise RuntimeError("unreachable")
 
     def answer_qa(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self._post_json("/qa", payload)
