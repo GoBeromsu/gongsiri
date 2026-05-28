@@ -4,11 +4,14 @@ import type { AgentQaPriorTurn } from "../contracts/agentService.js";
 import { resolveAgentRoot } from "../agentPaths.js";
 import {
   createPiSession,
+  runPiSession,
   DEFAULT_MODEL,
   type PiSessionOptions,
   type PiSession,
   type PiRunResult,
 } from "./piSession.js";
+import type { ToolDefinition } from "@earendil-works/pi-coding-agent";
+import type { SystemPromptContext } from "./systemPrompt.js";
 
 const IDLE_TTL_MS = 30 * 60 * 1000;
 const MAX_WARM = 100;
@@ -104,6 +107,7 @@ export const getOrCreateQaSession = async (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const session = (await createPiSession(
     buildSessionOptions(),
+    "gongsiri-qa",
   )) as PiSession & { agent: any };
 
   if (priorTurns.length > 0) {
@@ -135,7 +139,17 @@ export const runQaTurn = async (
   convKey: string,
   prompt: string,
   priorTurns: AgentQaPriorTurn[],
+  skillName?: string,
+  tools?: ToolDefinition[],
+  promptCtx?: SystemPromptContext,
 ): Promise<PiRunResult> => {
+  // tool-loop 활성화 시 runPiSession으로 위임 (warm session 불필요)
+  // qa budget: maxTurns=3, 30s (runPiSession의 60s budget 내에서 동작)
+  if (tools && tools.length > 0) {
+    return runPiSession(prompt, skillName ?? "gongsiri-qa", tools, promptCtx);
+  }
+
+  // tool 없는 경우 warm session 사용 (기존 경로)
   const entry = await getOrCreateQaSession(convKey, priorTurns);
 
   let resolvePending!: () => void;

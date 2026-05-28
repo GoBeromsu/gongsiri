@@ -1,9 +1,25 @@
 ---
 title: "gongsiri §8 자율 동작 갭"
-tags: ["gongsiri", "agent", "next-steps", "disclosure-monitoring-skill", "gap", "pipeline", "resolved", "pi-sdk", "http"]
+tags:
+  [
+    "gongsiri",
+    "agent",
+    "next-steps",
+    "disclosure-monitoring-skill",
+    "gap",
+    "pipeline",
+    "resolved",
+    "pi-sdk",
+    "http",
+  ]
 created: 2026-05-21T06:11:07.495Z
 updated: 2026-05-21T13:22:18.582Z
-sources: ["기획서 §8", "agent/src/triggers/disclosureTrigger.ts", "agent/src/tools/runAnalysisPipeline.ts"]
+sources:
+  [
+    "기획서 §8",
+    "agent/src/triggers/disclosureTrigger.ts",
+    "agent/src/tools/runAnalysisPipeline.ts",
+  ]
 links: ["gongsiri.md", "tool-vs-skill.md", "gongsiri-http-pi-sdk.md"]
 category: decision
 confidence: high
@@ -19,20 +35,21 @@ schemaVersion: 1
 기획서 §8 흐름: `트리거 → 신규 공시 감지 → 자동 파이프라인 → 점수 분기 → 알림 → 이력 저장`.
 
 현재 구현은 **감지와 분석이 끊겨 있음**:
+
 - `runTriggeredDisclosureCheck` → `fetchDisclosures`만 하고 **끝** (감지에서 멈춤)
 - `runAnalysisPipelineTool` → 완전 별개 CLI (`runPipelineTrigger.ts`)
 - 둘을 잇는 코드 없음
 
 ## 갭 표 (기획서 §8 vs 현재)
 
-| §8 단계 | 상태 |
-|---|---|
-| 스케줄러 / 수동 트리거 | ✅ |
-| 신규 공시 감지 | ✅ |
-| 감지 → **자동 파이프라인 실행** | ❌ 끊김 |
-| 4↑ 경고 / 3↓ STEP2 분기 | ❌ agent 분기 없음 |
-| 알림 발송 | ❌ preparation payload만 (G003 경계) |
-| 분석 이력 저장 | ⚠️ checkpoint = 마지막 rcept_no만 |
+| §8 단계                         | 상태                                 |
+| ------------------------------- | ------------------------------------ |
+| 스케줄러 / 수동 트리거          | ✅                                   |
+| 신규 공시 감지                  | ✅                                   |
+| 감지 → **자동 파이프라인 실행** | ❌ 끊김                              |
+| 4↑ 경고 / 3↓ STEP2 분기         | ❌ agent 분기 없음                   |
+| 알림 발송                       | ❌ preparation payload만 (G003 경계) |
+| 분석 이력 저장                  | ⚠️ checkpoint = 마지막 rcept_no만    |
 
 ## 다음 작업: `disclosure-monitoring-skill`
 
@@ -65,10 +82,20 @@ schemaVersion: 1
 
 ### §8 갭 현황 (갱신)
 
-| §8 단계 | 상태 |
-|---|---|
-| 감지 → 자동 파이프라인 실행 | 🔜 report 경로로 해소 예정 (이번 범위) |
-| QA 에이전트 경유 | 🔜 QA 경로로 해소 예정 (이번 범위, docs/10 #2) |
-| 자율 스케줄러 루프 | ⏳ 여전히 보류 — 상시 Node 서비스에 추후 호스팅 |
+| §8 단계                     | 상태                                                            |
+| --------------------------- | --------------------------------------------------------------- |
+| 감지 → 자동 파이프라인 실행 | ✅ 해소됨 — report 경로 tool-loop 활성화 (2026-05-28)           |
+| QA 에이전트 경유            | ✅ 해소됨 — qa 경로 5개 tool 자율 호출 활성화 (2026-05-28, #94) |
+| 자율 스케줄러 루프          | ⏳ 여전히 보류 — 상시 Node 서비스에 추후 호스팅                 |
+
+### 2026-05-28 Update — tool-loop 활성화로 report+qa 갭 해소
+
+`feature/C-pi-agent-tool-loop` PR에서:
+
+- `POST /report`: agent가 `run_risk_analysis` 첫 턴 필수 호출 + 4개 tool 자율 loop (MAX_TURNS=5, 60s)
+- `POST /qa`: agent가 5개 tool 자율 호출 — 데이터 조회 필요 시만 (MAX_TURNS=5, 60s)
+- `POST /checklist-explanation`: `noTools: "all"` 유지 (변경 없음)
+
+Pi SDK `defineTool()` 5개 tool이 `agent/src/tools/`에 구현됨. SKILL.md `tools:` frontmatter로 가드레일 명시.
 
 상세: [[gongsiri 에이전트 HTTP + Pi SDK 전환 결정]]

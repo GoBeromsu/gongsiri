@@ -11,7 +11,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "npm run build && node --test test/**/*.test.mjs",
+    "test": "npm run build && node --experimental-test-module-mocks --test test/**/*.test.mjs",
     "start": "node dist/server.js",
     "trigger": "npm run build && node dist/cli/runDisclosureTrigger.js",
     "serve": "npm run build && node dist/server.js",
@@ -21,6 +21,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@earendil-works/pi-coding-agent": "^0.75.4"
+    "@earendil-works/pi-coding-agent": "^0.75.4",
+    "typebox": "1.1.38"
   }
 }

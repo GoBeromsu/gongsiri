@@ -66,10 +66,27 @@ schemaVersion: 1
 
 ## 현재 agent/ 코드 상태
 
-- ✅ tool 3개: `fetchDisclosures`, `runAnalysisPipeline`, `chatWithSolar`
-- ✅ skill 1개: `disclosure-intake-skill` (얇음 — fetch만)
+**2026-05-28 tool-loop 활성화** — report 경로에서 agent가 4개 tool을 자율 호출하는 loop로 동작.
+
+- ✅ tool 5개 (Pi SDK `defineTool()` 기반):
+  - `fetchDisclosures` — 기존 tool, 호환성 유지 (report 경로 registry 제외)
+  - `runRiskAnalysis` (`run_risk_analysis`) — **신규** 6항목 정량 채점 파이프라인 실행
+  - `fetchDisclosureEvidence` (`fetch_disclosure_evidence`) — **신규** 공시 근거 조회
+  - `fetchTradeInfo` (`fetch_trade_info`) — **신규** 주가·거래 정보 조회
+  - `searchNews` (`search_news`) — **신규** 뉴스 검색
+- ✅ skill 3개 (`gongsiri-` prefix, Pi SDK `skillsOverride` 로드):
+  - `gongsiri-report` — tool-loop 활성, 4개 tool 자율 호출, 최대 5턴 60s
+  - `gongsiri-qa` — tool-loop 활성, 5개 tool 자율 호출 (필요 시만), 최대 5턴 60s
+  - `gongsiri-checklist-explanation` — `noTools: "all"` strict, single-call
 - ✅ `disclosureScheduler.ts`(30분 폴링 골격), `disclosureTrigger.ts`(checkpoint diff), `disclosureCheckpoint.ts`
-- subagent 불필요 — 파이프라인이 결정적 고정 순서라 추론 루프 분기 없음.
+- ✅ router: `agent/src/triggers/disclosureRouter.ts` (구 `disclosureIntakeSkill.ts` rename)
+
+## System Prompt
+
+- 파일: `agent/.pi/prompts/gongsiri-system.md`
+- 포맷: claude-code convention (YAML frontmatter + 마크다운 섹션)
+- 주입: Pi SDK `systemPromptOverride` (`agent/src/pi/systemPrompt.ts:loadGongsiriSystemPrompt()`)
+- 변수: `${MODE}`, `${CORP_CODE}`, `${TRACE_ID}`, `${CONTRACT_VERSION}`, `${TODAY_DATE}`, `${WORKING_DIRECTORY}`
 
 관련: [[Tool vs Skill — 에이전트 멘탈 모델]], [[gongsiri §8 자율 동작 갭]]
 

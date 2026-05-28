@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import os
 from typing import Any
 from uuid import uuid4
 
+from backend.agent_client import AgentServiceClient
 from backend.agent_service import attach_agent_report
 from backend.analyzer.pipeline import CONTRACT_VERSION, run_pipeline_request
 from backend.auth.dev_session import resolve_dev_user_id
@@ -13,6 +15,7 @@ from backend.report_runtime_common import (
     detail_view_from_report_row,
     normalize_corp_code,
     normalize_keyword,
+    observed_at,
     risk_level,
     source_timestamps,
     summary_view,
@@ -71,6 +74,26 @@ def build_report_detail_response(payload: dict[str, Any]) -> dict[str, Any]:
         if cached is not None:
             return detail_view_from_report_row(cached, fallback={"used": False})
 
+    # agent tool-loop path (cache miss 후에만 실행 — binding #5)
+    if os.getenv("GONGSIRI_AGENT_REPORT_MODE", "").lower() in {"true", "1", "yes"} and corp_code:
+        agent_resp = AgentServiceClient(timeout=60.0).generate_report(
+            {
+                "corpCode": corp_code,
+                "traceId": str(payload.get("traceId") or uuid4()),
+                "contractVersion": str(payload.get("contractVersion") or CONTRACT_VERSION),
+            }
+        )
+        saved = save_agent_path_report(
+            provider=provider,
+            corp_code=corp_code,
+            corp_name=str(payload.get("corpName") or corp_code),
+            agent_response=agent_resp,
+            request_context={"corpCode": corp_code, "source": "agent_tool_loop"},
+        )
+        return detail_view_from_report_row(
+            saved, fallback={"used": False, "reason": "agent_tool_loop"}
+        )
+
     pipeline_request = pipeline_request_from_payload(
         payload, corp_code=corp_code or None, keyword=keyword or None
     )
@@ -125,6 +148,60 @@ def save_generated_report(
         "source_timestamps": source_timestamps(bundle),
         "strict_pi_sdk": 1,
         "generated_at": generated_at,
+        "source_version": SCHEMA_VERSION,
+    }
+    return provider.reports.save_detail(row)
+
+
+def save_agent_path_report(
+    provider: Any,
+    *,
+    corp_code: str,
+    corp_name: str,
+    agent_response: dict[str, Any],
+    request_context: dict[str, Any],
+) -> dict[str, Any]:
+    """agent tool-loop `/report` 응답을 DB row로 변환해 저장한다.
+
+    agent_response shape (보수적 파싱):
+      {ok, data: {report: {shortTermMarkdown, longTermMarkdown, disclaimerMarkdown},
+                  analysisGuard: {riskScore, riskLevel, checklistIds}},
+       evidence[], warnings[], traceId, contractVersion}
+    """
+    data = agent_response.get("data") if isinstance(agent_response.get("data"), dict) else {}
+    report = data.get("report") if isinstance(data.get("report"), dict) else {}
+    guard = data.get("analysisGuard") if isinstance(data.get("analysisGuard"), dict) else {}
+    warnings = (
+        agent_response.get("warnings") if isinstance(agent_response.get("warnings"), list) else []
+    )
+
+    raw_risk_level = guard.get("riskLevel") or "normal"
+    try:
+        safe_risk_level = risk_level(raw_risk_level)
+    except RuntimeError:
+        safe_risk_level = "normal"
+
+    trace_id = str(agent_response.get("traceId") or uuid4())
+    row = {
+        "id": f"report-{corp_code}-{trace_id}",
+        "user_id": resolve_dev_user_id(),
+        "corp_code": corp_code,
+        "corp_name": corp_name,
+        "risk_level": safe_risk_level,
+        "risk_score": int(guard.get("riskScore") or 0),
+        "checklist": checklist_storage([]),
+        "short_term_report": str(
+            report.get("shortTermMarkdown") or report.get("shortTermReport") or ""
+        ),
+        "long_term_report": str(
+            report.get("longTermMarkdown") or report.get("longTermReport") or ""
+        ),
+        "disclaimer": str(report.get("disclaimerMarkdown") or report.get("disclaimer") or ""),
+        "missing_evidence": [str(w) for w in warnings],
+        "request_context": request_context,
+        "source_timestamps": {},
+        "strict_pi_sdk": 1,
+        "generated_at": observed_at(),
         "source_version": SCHEMA_VERSION,
     }
     return provider.reports.save_detail(row)

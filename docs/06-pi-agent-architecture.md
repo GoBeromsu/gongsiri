@@ -162,10 +162,14 @@ Rules: `frontend → backend` allowed; `backend → agent` allowed;
   provider registered by `agent/src/pi/piSession.ts` — default
   `baseUrl: "https://api.upstage.ai/v1"`, `api: "openai-completions"`, model id
   `solar-pro3`, and runtime API key from `UPSTAGE_API_KEY`.
-- Pi SDK is a _coding_ agent; for the bundle→report / QA task it runs with
-  `noTools: "all"` and backend-provided JSON context only. The SDK is adopted now as the agent
-  substrate even though report+QA are single-call tasks, because genuine multi-step
-  autonomy (Option B / §8 self-driving loop) is the intended next milestone.
+- Pi SDK is a _coding_ agent. **checklist-explanation** path runs with `noTools: "all"`
+  and backend-provided JSON context only (strict single-call). **QA and report paths** run as
+  tool-using agent loops with `customTools` (2026-05-28 — see §ADR-2026-05-28):
+  - report: `[run_risk_analysis, fetch_disclosure_evidence, fetch_trade_info, search_news]`
+  - qa: `[fetch_disclosures, run_risk_analysis, fetch_disclosure_evidence, fetch_trade_info, search_news]`
+    Both use max 5 turns, 10 s per-tool timeout, 60 s total budget.
+    The SDK is adopted as the agent substrate so that genuine multi-step autonomy
+    (Option B / §8 self-driving loop) is the natural next milestone.
 - Backend↔agent communication is **internal HTTP** (long-running agent service),
   not subprocess RPC — chosen so Pi session state survives and the autonomous
   scheduler can later be hosted in the same process.
@@ -208,6 +212,85 @@ Deferred(§8): 멀티 인스턴스 sticky routing / 분산 conversation cache.
 ## G010 Narrative Migration Note
 
 As of G010, backend analyzer ownership is narrowed to deterministic scoring, evidence mapping, and preparation DTOs. Report narrative, Q&A prose, and checklist explanation prose belong to the 공시리 agent modes (`report`, `qa`, `checklist_explanation`) over normalized backend facts. Legacy `backend/analyzer/solar_step*.py` prompt modules are retained only as historical/compatibility artifacts until later cleanup removes them entirely.
+
+## System Prompt (2026-05-28)
+
+### claude-code convention 채택
+
+공시리 system prompt는 [tallesborges/agentic-system-prompts](https://github.com/tallesborges/agentic-system-prompts) claude-code 포맷을 채택한다.
+YAML frontmatter(source/retrieved/model/provider/variables) + 마크다운 섹션 구조 유지.
+
+**파일 경로:** `agent/.pi/prompts/gongsiri-system.md`
+
+### Pi SDK 주입 지점
+
+Pi SDK `systemPromptOverride` 옵션 (sdk.md:458, :920)으로 주입:
+
+```ts
+systemPromptOverride: () => loadGongsiriSystemPrompt({
+  mode,
+  corpCode,
+  traceId,
+  contractVersion,
+  todayDate: new Date().toISOString().slice(0, 10),
+  workingDirectory: process.cwd(),
+}),
+```
+
+`loadGongsiriSystemPrompt()`는 `agent/src/pi/systemPrompt.ts`에 구현 — frontmatter strip + `${VAR}` 치환 수행.
+
+### 변수 목록
+
+| 변수                   | 의미                                        |
+| ---------------------- | ------------------------------------------- |
+| `${MODE}`              | `report` \| `qa` \| `checklist_explanation` |
+| `${CORP_CODE}`         | 종목 코드 (예: `035720`), 없으면 `(N/A)`    |
+| `${TRACE_ID}`          | 요청 추적 ID                                |
+| `${CONTRACT_VERSION}`  | 계약 버전 (예: `v2`)                        |
+| `${TODAY_DATE}`        | 오늘 날짜 KST (예: `2026-05-28`)            |
+| `${WORKING_DIRECTORY}` | `process.cwd()`                             |
+
+## ADR-2026-05-28 — Report-Path Tool-Loop Activation
+
+**상태:** 결정됨 (plan iter 3, `feature/C-pi-agent-tool-loop`)
+
+### 문제
+
+`noTools: "all"` 정책은 QA·checklist-explanation에 적합하나 report 경로에서는 agent가
+tool을 전혀 실행하지 못해 "진짜 에이전트 자율 동작"이 불가능함.
+사용자 바인딩 결정: "agent가 첫 turn에 `run_risk_analysis`를 직접 호출"하는 것이
+핵심 변화로 정의됨 (spec Round 3).
+
+### 결정
+
+- `POST /report` 경로에서 `noTools: "all"` 제거, `customTools` 4개 활성화.
+- `POST /qa` 경로에서 `noTools: "all"` 제거, `customTools` 5개 활성화 (데이터 조회 필요 시만 자율 호출).
+- `POST /checklist-explanation`만 `noTools: "all"` 유지.
+- 환경변수 `GONGSIRI_AGENT_REPORT_MODE=true`로 활성화 (기본값 false = 기존 pipeline 경로).
+
+### Report 경로 tool 목록
+
+| Wire name                   | TS instance                   | HTTP endpoint                        |
+| --------------------------- | ----------------------------- | ------------------------------------ |
+| `run_risk_analysis`         | `runRiskAnalysisTool`         | `POST /pipeline/trigger`             |
+| `fetch_disclosure_evidence` | `fetchDisclosureEvidenceTool` | `GET /api/v1/external/dart/evidence` |
+| `fetch_trade_info`          | `fetchTradeInfoTool`          | `GET /api/v1/external/trade-info`    |
+| `search_news`               | `searchNewsTool`              | `GET /api/v1/external/news`          |
+
+`fetch_disclosures`는 report 경로 registry에 포함하지 않는다 (qa/checklist 전용 호환 유지).
+
+### 가드레일
+
+- MAX_TURNS = 5, per-tool timeout = 10 s, 전체 예산 = 60 s (`Promise.race`)
+- Solar narration은 non-final turn에만; final turn은 반드시 `{`로 시작
+- tool 실패 시 retry 1회 후 `warnings[]` 추가, agent는 계속 진행 (500 금지)
+- cache hit 시 agent tool-loop 우회 (GONGSIRI_AGENT_REPORT_MODE 분기는 cache miss 이후)
+
+### 결과
+
+- HTTP 계약 `{view:"report-detail", corpCode}` 미변경.
+- `resolve_report_view()` 미수정.
+- frontend 변경 없음.
 
 ## G010 Cleanup Record
 

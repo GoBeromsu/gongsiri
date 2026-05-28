@@ -44,9 +44,9 @@ test("report buildPrompt includes SKILL.md JSON-only rule", () => {
 
 test("report buildPrompt includes disclaimer instruction from SKILL.md", () => {
   const prompt = buildPrompt({ ...baseRequest, mode: "report" });
-  // SKILL.md에 명시된 disclaimer 지시
+  // SKILL.md에 명시된 disclaimer 지시 (투자 자문 고지)
   assert.match(prompt, /disclaimerMarkdown/);
-  assert.match(prompt, /투자 판단/);
+  assert.match(prompt, /투자 자문/);
 });
 
 test("report buildPrompt includes 6-item checklist section from SKILL.md", () => {
@@ -81,22 +81,25 @@ test("qa buildPrompt includes SKILL.md role/tone instruction", () => {
   assert.match(prompt, /1인칭/);
 });
 
-test("qa buildPrompt includes SKILL.md output contract", () => {
+test("qa buildPrompt includes SKILL.md output rule", () => {
   const prompt = buildPrompt({
     ...baseRequest,
     mode: "qa",
     question: "CB 공시가 있나요?",
   });
-  assert.match(prompt, /answerMarkdown/);
+  // QA SKILL.md: 자연어 답변 (JSON 강제 없음), 투자 자문 고지 포함
+  assert.match(prompt, /자연어/);
+  assert.match(prompt, /투자 자문/);
 });
 
-test("qa buildPrompt includes JSON-only rule from SKILL.md", () => {
+test("qa buildPrompt includes tool guidance from SKILL.md", () => {
   const prompt = buildPrompt({
     ...baseRequest,
     mode: "qa",
     question: "CB 공시가 있나요?",
   });
-  assert.match(prompt, /JSON만 출력/);
+  // QA SKILL.md: tool 호출 판단 기준 포함
+  assert.match(prompt, /fetch_disclosures|run_risk_analysis/);
 });
 
 test("qa buildPrompt appends question as dynamic part", () => {

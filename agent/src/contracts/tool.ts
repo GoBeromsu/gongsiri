@@ -1,22 +1,5 @@
-import type { FetchDisclosuresRequest } from "./request.js";
-import type { ToolResult } from "./response.js";
-
 export const FETCH_DISCLOSURES_TOOL_NAME = "fetch_disclosures";
-
-export type ToolDescriptor = {
-  name: typeof FETCH_DISCLOSURES_TOOL_NAME;
-  description: string;
-  canonicalCommand: "POST /internal/disclosures";
-};
-
-export type ToolDefinition = {
-  descriptor: ToolDescriptor;
-  invoke(request: FetchDisclosuresRequest): Promise<ToolResult>;
-};
-
-export const fetchDisclosuresToolDescriptor: ToolDescriptor = {
-  name: FETCH_DISCLOSURES_TOOL_NAME,
-  description:
-    "Read-only disclosure fetch bridge backed by backend /internal/disclosures.",
-  canonicalCommand: "POST /internal/disclosures",
-};
+export const RUN_RISK_ANALYSIS_TOOL_NAME = "run_risk_analysis";
+export const FETCH_DISCLOSURE_EVIDENCE_TOOL_NAME = "fetch_disclosure_evidence";
+export const FETCH_TRADE_INFO_TOOL_NAME = "fetch_trade_info";
+export const SEARCH_NEWS_TOOL_NAME = "search_news";

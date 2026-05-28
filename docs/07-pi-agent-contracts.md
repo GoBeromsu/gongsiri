@@ -291,6 +291,35 @@ Rules:
 - `POST /report`, `POST /qa`, and `POST /checklist-explanation` must use the Pi SDK (`createAgentSession`) with Upstage configured as an OpenAI-compatible provider.
 - Strict Pi SDK-first: backend must not fall back to legacy Solar-only QA/report generation when the agent service fails.
 - The agent service is leaf-only: it must not call backend HTTP endpoints or mutate DB/report history.
-- Runtime tools are disabled for the demo path with `noTools: "all"`; all source material must come from backend-generated JSON context.
+- **`POST /checklist-explanation`**: `noTools: "all"` — all source material from backend-generated JSON context (unchanged).
+- **`POST /qa`**: tool-using agent loop — `customTools` 5개 (`fetch_disclosures`, `run_risk_analysis`, `fetch_disclosure_evidence`, `fetch_trade_info`, `search_news`), max 5 turns, 60 s budget. 데이터 조회가 필요한 질문에만 tool 호출; 개념 질문은 바로 답변.
+- **`POST /report` with `GONGSIRI_AGENT_REPORT_MODE=true`**: tool-using agent loop — `customTools` 4개, max 5 turns, 60 s budget. All source material from backend context + tool results.
 - User-facing text must be Korean Markdown, first-person, and explicitly identify the speaker as `공시리`.
 - `analysisGuard` is backend-authored deterministic truth echoed through the service boundary; agent-written Markdown must not alter `riskScore`, `riskLevel`, or checklist IDs.
+
+## Report-Path Tool Descriptor Table (2026-05-28)
+
+Report mode (`GONGSIRI_AGENT_REPORT_MODE=true`)에서 활성화되는 4개 tool:
+
+| Wire name                   | TS instance                   | HTTP method | Endpoint                                          | 핵심 파라미터                            | 핵심 응답 필드                                  |
+| --------------------------- | ----------------------------- | ----------- | ------------------------------------------------- | ---------------------------------------- | ----------------------------------------------- |
+| `run_risk_analysis`         | `runRiskAnalysisTool`         | POST        | `/pipeline/trigger`                               | `corpCode`, `contractVersion`, `traceId` | `ok`, `risk_score`, `risk_level`, `checklist[]` |
+| `fetch_disclosure_evidence` | `fetchDisclosureEvidenceTool` | GET         | `/api/v1/external/dart/evidence?corp_code=`       | `corpCode`                               | `ok`, `items[]`                                 |
+| `fetch_trade_info`          | `fetchTradeInfoTool`          | GET         | `/api/v1/external/trade-info?stock_code=&market=` | `stockCode`, `market`                    | `ok`, `price`, `change_rate`, `history`         |
+| `search_news`               | `searchNewsTool`              | GET         | `/api/v1/external/news?query=`                    | `query`                                  | `ok`, `items[]`                                 |
+
+`fetch_disclosures`는 report 경로 `customTools` registry에 포함하지 않는다 — qa/checklist 전용 호환 유지.
+
+## QA-Path Tool Descriptor Table (2026-05-28)
+
+QA mode에서 활성화되는 5개 tool (데이터 조회가 필요한 질문에만 자율 호출):
+
+| Wire name                   | TS instance                   | HTTP method | Endpoint                                          | 핵심 파라미터                            | 핵심 응답 필드                                  |
+| --------------------------- | ----------------------------- | ----------- | ------------------------------------------------- | ---------------------------------------- | ----------------------------------------------- |
+| `fetch_disclosures`         | `fetchDisclosuresTool`        | POST        | `/internal/disclosures`                           | `corpCode` 또는 `keyword`                | `ok`, `data.disclosures[]`                      |
+| `run_risk_analysis`         | `runRiskAnalysisTool`         | POST        | `/pipeline/trigger`                               | `corpCode`, `contractVersion`, `traceId` | `ok`, `risk_score`, `risk_level`, `checklist[]` |
+| `fetch_disclosure_evidence` | `fetchDisclosureEvidenceTool` | GET         | `/api/v1/external/dart/evidence?corp_code=`       | `corpCode`                               | `ok`, `items[]`                                 |
+| `fetch_trade_info`          | `fetchTradeInfoTool`          | GET         | `/api/v1/external/trade-info?stock_code=&market=` | `stockCode`, `market`                    | `ok`, `price`, `change_rate`, `history`         |
+| `search_news`               | `searchNewsTool`              | GET         | `/api/v1/external/news?query=`                    | `query`                                  | `ok`, `items[]`                                 |
+
+QA 출력: JSON 강제 없음 — 자연어 한국어 답변. 1인칭 공시리 톤 유지.
