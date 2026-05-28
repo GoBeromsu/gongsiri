@@ -15,13 +15,7 @@ export default function SearchInput({ onSelect }: Props) {
   const hasQuery = Boolean(query.trim());
 
   useEffect(() => {
-    if (!query.trim()) {
-      setResults([]);
-      setSearching(false);
-      return;
-    }
-
-    setSearching(true);
+    if (!query.trim()) return;
     const timer = setTimeout(() => {
       fetch(`/api/stocks/search?q=${encodeURIComponent(query)}`)
         .then((res) => res.json())
@@ -37,6 +31,16 @@ export default function SearchInput({ onSelect }: Props) {
 
     return () => clearTimeout(timer);
   }, [query]);
+
+  function handleQueryChange(value: string) {
+    setQuery(value);
+    if (value.trim()) {
+      setSearching(true);
+    } else {
+      setResults([]);
+      setSearching(false);
+    }
+  }
 
   function handleSelect(company: CompanyInfo) {
     onSelect(company);
@@ -60,7 +64,7 @@ export default function SearchInput({ onSelect }: Props) {
         />
         <input
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => handleQueryChange(e.target.value)}
           placeholder="종목명 또는 코드 검색"
           style={{
             width: "100%",
@@ -77,10 +81,7 @@ export default function SearchInput({ onSelect }: Props) {
         />
         {query && (
           <button
-            onClick={() => {
-              setQuery("");
-              setResults([]);
-            }}
+            onClick={() => handleQueryChange("")}
             style={{
               position: "absolute",
               right: 10,
