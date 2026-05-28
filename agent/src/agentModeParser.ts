@@ -94,6 +94,41 @@ export const parseModeResult = (
   rawText: string,
   request: AgentServiceRequest,
 ): ParsedAgentModeResult => {
+  // qa mode는 자연어 한국어 답변(free-form markdown)이 계약상 허용된다.
+  // (docs/07-pi-agent-contracts.md: "QA 출력: JSON 강제 없음")
+  // Solar/Pi가 plain text를 반환하면 answerMarkdown으로 wrapping해 처리한다.
+  if (mode === "qa") {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(rawText);
+    } catch {
+      // plain text fallback — wrap into qa JSON contract
+      parsed = { answerMarkdown: rawText.trim() };
+    }
+    if (!isObject(parsed)) {
+      parsed = { answerMarkdown: rawText.trim() };
+    }
+    const warnings = stringArray((parsed as Record<string, unknown>).warnings);
+    const parsedChecklist = Array.isArray(
+      (parsed as Record<string, unknown>).checklist,
+    )
+      ? ((parsed as Record<string, unknown>).checklist as unknown[])
+      : undefined;
+    const analysisGuard = analysisGuardFrom(request, parsedChecklist);
+    const answerMarkdown = requireString(
+      (parsed as Record<string, unknown>).answerMarkdown,
+      { fieldName: "answerMarkdown" },
+    );
+    return {
+      markdown: answerMarkdown,
+      warnings,
+      data: {
+        qa: { answerMarkdown },
+        analysisGuard,
+      },
+    };
+  }
+
   let parsed: unknown;
   try {
     parsed = JSON.parse(rawText);
@@ -114,20 +149,6 @@ export const parseModeResult = (
     ? (parsed.checklist as unknown[])
     : undefined;
   const analysisGuard = analysisGuardFrom(request, parsedChecklist);
-
-  if (mode === "qa") {
-    const answerMarkdown = requireString(parsed.answerMarkdown, {
-      fieldName: "answerMarkdown",
-    });
-    return {
-      markdown: answerMarkdown,
-      warnings,
-      data: {
-        qa: { answerMarkdown },
-        analysisGuard,
-      },
-    };
-  }
 
   if (mode === "checklist_explanation") {
     const summaryMarkdown = requireString(parsed.summaryMarkdown, {
