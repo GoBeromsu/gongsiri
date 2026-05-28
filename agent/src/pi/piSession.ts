@@ -227,7 +227,7 @@ export const runPiSession = async (
     const candidate = event as {
       type?: string;
       assistantMessageEvent?: { type?: string; delta?: string };
-      message?: string;
+      message?: unknown; // SDK turn_end의 message는 문자열이 아닌 메시지 객체
       toolResults?: Array<{
         toolName?: string;
         latencyMs?: number;
@@ -248,8 +248,9 @@ export const runPiSession = async (
     }
 
     if (candidate.type === "turn_end") {
-      // E4 defensive fallback: prefer event.message, fall back to accumulated text
-      finalText = candidate.message || currentTurnText;
+      // Pi SDK turn_end의 event.message는 메시지 객체({role, content, ...})이므로
+      // 문자열 텍스트는 message_update 이벤트로 누적한 currentTurnText를 사용한다.
+      finalText = currentTurnText;
 
       if (candidate.toolResults) {
         for (const tr of candidate.toolResults) {
