@@ -44,20 +44,21 @@ test("공시리 데모 시나리오", async ({ page }) => {
   await addButton.click();
   await page.waitForTimeout(600);
 
-  // 모달 내 검색창에 "하이닉스" 입력
-  const searchInput = page
-    .locator('[placeholder*="종목"], [placeholder*="검색"], input[type="text"]')
-    .last();
+  // 모달 내 검색창에 "하이닉스" 입력 (type()으로 React onChange 트리거)
+  const searchInput = page.locator(
+    'input[placeholder="종목명 또는 코드 검색"]',
+  );
   await searchInput.waitFor({ state: "visible", timeout: 8_000 });
-  await searchInput.fill("하이닉스");
-  await page.waitForTimeout(1500);
+  await searchInput.click();
+  await searchInput.type("하이닉스", { delay: 80 });
+  await page.waitForTimeout(2000);
 
-  // 검색 결과에서 SK하이닉스(에스케이하이닉스) 선택
+  // 검색 결과에서 에스케이하이닉스보통주 선택
   const hynixRow = page
-    .locator('li, [role="option"], button')
-    .filter({ hasText: /에스케이하이닉스|SK하이닉스|SKhynix/i })
+    .locator("button")
+    .filter({ hasText: /에스케이하이닉스/ })
     .first();
-  await hynixRow.waitFor({ state: "visible", timeout: 10_000 });
+  await hynixRow.waitFor({ state: "visible", timeout: 15_000 });
   await hynixRow.click();
   await page.waitForTimeout(600);
 
@@ -163,14 +164,11 @@ test("공시리 데모 시나리오", async ({ page }) => {
     });
   await page.waitForTimeout(800);
 
-  // D. input selector — placeholder 의존 제거, 페이지의 마지막 text input 사용
-  //    send 버튼(IconSend)이 visible 상태가 된 뒤 그 form 컨테이너 안의 input을 잡음
-  const sendButton = page.locator("button:has(svg)").last();
-  await sendButton.waitFor({ state: "visible", timeout: 10_000 });
-  const qaInput = page.locator('input[type="text"], input:not([type])').last();
+  // D. QA input — placeholder가 종목명 기반으로 동적으로 바뀜, "에 대해 질문하세요" 포함
+  const qaInput = page.locator('input[placeholder*="에 대해 질문하세요"]');
   await qaInput.waitFor({ state: "visible", timeout: 10_000 });
 
-  // 1턴: 첫 번째 질문
+  // 1턴: 첫 번째 질문 (Enter로 전송)
   await qaInput.fill("삼성전자의 최근 위험 시그널은 뭔가요?");
   await qaInput.press("Enter");
 
