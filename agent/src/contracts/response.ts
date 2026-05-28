@@ -43,9 +43,9 @@ export type ToolResultFailure = {
 export type ToolResult = ToolResultSuccess | ToolResultFailure;
 
 export type AgentResponse = {
-  agent: "PiDisclosureAgent";
-  skill: "disclosure-intake-skill";
-  tool: "fetch_disclosures";
+  agent: string;
+  skill: string;
+  tool: string;
   traceId: string;
   contractVersion: ContractVersion;
   result: ToolResult;

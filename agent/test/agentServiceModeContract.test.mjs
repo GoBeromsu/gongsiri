@@ -14,16 +14,20 @@ const baseRequest = {
     short_term_report: "",
     long_term_report: "",
     disclaimer: "",
-    missing_evidence: []
-  }
+    missing_evidence: [],
+  },
 };
 
-test("report mode prompt requires JSON contract and 공시리 tone", () => {
+test("report mode buildPrompt returns SKILL.md content with JSON context", () => {
   const prompt = buildPrompt({ ...baseRequest, mode: "report" });
 
+  // buildPrompt embeds SKILL.md body + JSON context block
+  assert.equal(typeof prompt, "string");
+  assert.ok(prompt.length > 0);
+  // SKILL.md content is embedded
   assert.match(prompt, /공시리/);
-  assert.match(prompt, /JSON만 출력/);
-  assert.match(prompt, /shortTermMarkdown/);
+  // JSON context block is appended
+  assert.match(prompt, /JSON context/);
 });
 
 test("parseModeResult returns structured report payload without changing guard", () => {
@@ -33,9 +37,9 @@ test("parseModeResult returns structured report payload without changing guard",
       shortTermMarkdown: "## 단기\nshort",
       longTermMarkdown: "## 장기\nlong",
       disclaimerMarkdown: "공시 기반 위험 점검입니다.",
-      warnings: []
+      warnings: [],
     }),
-    { ...baseRequest, mode: "report" }
+    { ...baseRequest, mode: "report" },
   );
 
   assert.equal(parsed.data.analysisGuard.riskScore, 2);
@@ -49,9 +53,9 @@ test("parseModeResult returns structured qa payload", () => {
     "qa",
     JSON.stringify({
       answerMarkdown: "저 공시리가 확인한 바로는 CB 공시를 함께 보셔야 합니다.",
-      warnings: []
+      warnings: [],
     }),
-    { ...baseRequest, mode: "qa", question: "질문" }
+    { ...baseRequest, mode: "qa", question: "질문" },
   );
 
   assert.equal(parsed.data.qa.answerMarkdown.includes("저 공시리가"), true);
@@ -66,25 +70,37 @@ test("parseModeResult returns structured checklist explanation payload", () => {
       items: [
         {
           id: "business-purpose-change",
-          markdown: "저 공시리가 보기에는 사업목적 변경 공시를 확인해야 합니다."
-        }
+          markdown:
+            "저 공시리가 보기에는 사업목적 변경 공시를 확인해야 합니다.",
+        },
       ],
-      warnings: []
+      warnings: [],
     }),
     {
       ...baseRequest,
       mode: "checklist_explanation",
-      checklistIds: ["business-purpose-change"]
-    }
+      checklistIds: ["business-purpose-change"],
+    },
   );
 
-  assert.equal(parsed.data.checklistExplanation.items[0].id, "business-purpose-change");
-  assert.match(parsed.data.checklistExplanation.items[0].markdown, /저 공시리가/);
+  assert.equal(
+    parsed.data.checklistExplanation.items[0].id,
+    "business-purpose-change",
+  );
+  assert.match(
+    parsed.data.checklistExplanation.items[0].markdown,
+    /저 공시리가/,
+  );
 });
 
 test("parseModeResult rejects malformed non-json mode output", () => {
   assert.throws(
-    () => parseModeResult("qa", "not-json", { ...baseRequest, mode: "qa", question: "질문" }),
-    /JSON/
+    () =>
+      parseModeResult("qa", "not-json", {
+        ...baseRequest,
+        mode: "qa",
+        question: "질문",
+      }),
+    /JSON/,
   );
 });

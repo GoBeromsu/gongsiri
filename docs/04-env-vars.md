@@ -17,7 +17,9 @@ PR1에서 Pi runtime과 Python collector bridge가 기대하는 환경변수를 
 - `GONGSIRI_SCHEDULER_INTERVAL_MINUTES` — optional default interval for cron/scheduler checks (default `30`)
 - `GONGSIRI_AGENT_HOST` — optional Pi SDK HTTP service bind host; default `127.0.0.1`
 - `GONGSIRI_AGENT_PORT` — optional Pi SDK HTTP service bind port; default `8787`
-- `GONGSIRI_AGENT_URL` — backend-to-agent internal HTTP base URL; default `http://127.0.0.1:8787`
+- `AGENT_SERVICE_URL` — backend-to-agent internal HTTP base URL (우선순위 1); Railway 배포 시 `AGENT_SERVICE_URL` 우선, 미설정 시 `GONGSIRI_AGENT_URL`, 둘 다 없으면 `http://localhost:8787`
+- `GONGSIRI_AGENT_URL` — backend-to-agent internal HTTP base URL (우선순위 2, fallback); default `http://127.0.0.1:8787`
+- `GONGSIRI_AGENT_REPORT_MODE` — `true`로 설정 시 `POST /api/v1/reports` report-detail 경로에서 agent tool-loop 활성화 (기본값 unset = 기존 pipeline 경로 유지)
 - `GONGSIRI_DB_MODE` — dev DB mode for local persistence; `memory` default, optional `file` for ignored `data/` persistence
 - `GONGSIRI_DB_PATH` — optional SQLite file path when `GONGSIRI_DB_MODE=file`; default `data/dev.sqlite`
 - `GONGSIRI_AUTH_MODE` — optional dev auth gate; only exact `dev` enables `admin/admin` demo login. If unset, dev auth is disabled.
@@ -104,7 +106,10 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 - Required env:
   - `UPSTAGE_API_KEY`
   - `DART_API_KEY`
-  - `GONGSIRI_AGENT_URL` — Railway agent public URL, for example `https://gongsiri-agent.up.railway.app`
+  - `AGENT_SERVICE_URL` — Railway agent public URL (우선순위 1), for example `https://gongsiri-agent.up.railway.app`
+  - `GONGSIRI_AGENT_URL` — Railway agent public URL (fallback, `AGENT_SERVICE_URL` 미설정 시 사용)
+- Optional env:
+  - `GONGSIRI_AGENT_REPORT_MODE` — `true` 설정 시 report-detail에서 agent tool-loop 활성화
 - Optional env:
   - `UPSTAGE_MODEL`
   - `UPSTAGE_BASE_URL`

@@ -51,7 +51,12 @@ function contextFrom(request: AgentServiceRequest): unknown {
       preparation: request.preparation,
     };
   }
-  return undefined;
+  return {
+    corpCode: request.corpCode,
+    corpName: request.corpName,
+    traceId: request.traceId,
+    contractVersion: request.contractVersion,
+  };
 }
 
 function stringArray(value: unknown): string[] {

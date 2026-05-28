@@ -10,6 +10,7 @@ import type {
   AgentServiceResponse,
 } from "./contracts/agentService.js";
 import { runPiSession } from "./pi/piSession.js";
+import type { SystemPromptContext } from "./pi/systemPrompt.js";
 import { runQaTurn, getWarmSessionsStats } from "./pi/qaSession.js";
 import { buildPrompt } from "./agentPrompt.js";
 import { AgentResponseParseError, parseModeResult } from "./agentModeParser.js";
@@ -27,6 +28,11 @@ import {
 } from "./agentHttpCore.js";
 import { createDisclosureScheduler } from "./scheduler/disclosureScheduler.js";
 import { runDisclosureMonitoring } from "./triggers/runDisclosureMonitoring.js";
+import { runRiskAnalysisTool } from "./tools/runRiskAnalysis.js";
+import { fetchDisclosureEvidenceTool } from "./tools/fetchDisclosureEvidence.js";
+import { fetchTradeInfoTool } from "./tools/fetchTradeInfo.js";
+import { searchNewsTool } from "./tools/searchNews.js";
+import { fetchDisclosuresTool } from "./tools/fetchDisclosures.js";
 
 loadLocalEnvFiles();
 
@@ -65,16 +71,55 @@ const successEvidence = (
   request: AgentServiceRequest,
   mode: AgentServiceMode,
   model: string,
-): AgentServiceEvidence[] => [
-  ...evidenceFrom(request),
-  {
-    source: "pi_sdk_agent_service",
-    mode,
-    strictPiSdk: true,
-    noTools: "all",
-    model,
-  },
-];
+  toolTraces?: import("./pi/piSession.js").TraceLogEntry[],
+): AgentServiceEvidence[] => {
+  const base = evidenceFrom(request);
+  // report와 qa는 tool-using agent loop
+  if (mode === "report" || mode === "qa") {
+    return [
+      ...base,
+      {
+        source: "pi_sdk_agent_service",
+        mode,
+        strictPiSdk: false,
+        model,
+      },
+      ...(toolTraces ?? []).map((t) => ({
+        source: "tool_trace" as const,
+        ...t,
+      })),
+    ];
+  }
+  // checklist_explanation은 noTools: "all" 유지
+  return [
+    ...base,
+    {
+      source: "pi_sdk_agent_service",
+      mode,
+      strictPiSdk: true,
+      noTools: "all",
+      model,
+    },
+  ];
+};
+
+const buildPromptCtx = (
+  mode: AgentServiceMode,
+  request: AgentServiceRequest,
+): SystemPromptContext => ({
+  mode,
+  corpCode: request.corpCode,
+  traceId: traceId(request),
+  contractVersion: contractVersion(request),
+  todayDate: new Date().toISOString().slice(0, 10),
+  workingDirectory: process.cwd(),
+});
+
+const resolveSkillName = (mode: AgentServiceMode): string => {
+  if (mode === "qa") return "gongsiri-qa";
+  if (mode === "checklist_explanation") return "gongsiri-checklist-explanation";
+  return "gongsiri-report";
+};
 
 const handleAgent = async (
   mode: AgentServiceMode,
@@ -85,16 +130,57 @@ const handleAgent = async (
   try {
     const rawBody = await readBody(req);
     request = validate(JSON.parse(rawBody || "{}"), mode);
+    const skillName = resolveSkillName(mode);
+
+    const promptCtx = buildPromptCtx(mode, request);
+    const qaTools = [
+      fetchDisclosuresTool,
+      runRiskAnalysisTool,
+      fetchDisclosureEvidenceTool,
+      fetchTradeInfoTool,
+      searchNewsTool,
+    ];
+    const reportTools = [
+      runRiskAnalysisTool,
+      fetchDisclosureEvidenceTool,
+      fetchTradeInfoTool,
+      searchNewsTool,
+    ];
+
     let result: import("./pi/piSession.js").PiRunResult;
     if (mode === "qa" && request.mode === "qa" && request.conversationKey) {
+      // warm session 대신 runPiSession으로 tool-loop 활성화 (maxTurns=3, budget=30s)
       result = await runQaTurn(
         request.conversationKey,
         buildPrompt(request),
         request.priorTurns ?? [],
+        skillName,
+        qaTools,
+        promptCtx,
+      );
+    } else if (mode === "qa") {
+      result = await runPiSession(
+        buildPrompt(request),
+        skillName,
+        qaTools,
+        promptCtx,
+      );
+    } else if (mode === "report") {
+      result = await runPiSession(
+        buildPrompt(request),
+        skillName,
+        reportTools,
+        promptCtx,
       );
     } else {
-      result = await runPiSession(buildPrompt(request));
+      result = await runPiSession(
+        buildPrompt(request),
+        skillName,
+        [],
+        promptCtx,
+      );
     }
+
     const parsed = parseModeResult(mode, result.text, request);
     json(res, 200, {
       ok: true,
@@ -104,9 +190,9 @@ const handleAgent = async (
       observedAt: nowIso(),
       markdown: parsed.markdown,
       text: parsed.markdown,
-      warnings: parsed.warnings,
+      warnings: [...(parsed.warnings ?? []), ...(result.warnings ?? [])],
       data: parsed.data,
-      evidence: successEvidence(request, mode, result.model),
+      evidence: successEvidence(request, mode, result.model, result.toolTraces),
     } satisfies AgentServiceResponse);
   } catch (error) {
     const message =

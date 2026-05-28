@@ -65,7 +65,8 @@ DART, KRX, 네이버 뉴스  →  normalized_data_bundle  →  analysis_result  
 - 데모 서버는 새 스크립트를 만들지 말고 **직접** 띄운다. 각 명령은 별도 터미널/tmux pane에서 실행.
 - 호출 방향은 `frontend(3000) → backend(8000) → agent(8787)`이다. 브라우저/프론트는 agent를 직접 호출하지 않는다.
 - `.env`는 로컬 전용이다. 최소 `UPSTAGE_API_KEY`, `DART_API_KEY`, `GONGSIRI_AGENT_URL=http://127.0.0.1:8787`, `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000`가 필요하다. 실제 키는 커밋 금지.
-- report/QA는 **strict Pi SDK-first**다. agent/Upstage 실패 시 Solar-only fallback을 만들지 않는다.
+- **qa+report는 tool-using agent loop (별도 가드레일 적용)**: 최대 5턴, 10초 per-tool timeout, 60초 전체 예산. **checklist_explanation만 strict Pi SDK-first** (`noTools: "all"`). agent/Upstage 실패 시 Solar-only fallback을 만들지 않는다.
+- system prompt: `agent/.pi/prompts/gongsiri-system.md` (claude-code format, Pi SDK `systemPromptOverride` 주입)
 - 사용자에게 보이는 agent 답변/오류 문구는 1인칭 `공시리` 톤을 유지한다.
 
 ```bash
@@ -160,6 +161,28 @@ lefthook install
 ## QA 멀티턴 컨텍스트
 
 QA는 같은 `(user, corp)` 단위로 컨텍스트가 이어집니다 (TTL 30m, LRU 100). `conversationKey="${user_id}::${corp_code}"` 기준으로 warm session이 유지되며, 세션 만료·재기동 시 `qa_history`의 최근 N≤20턴이 cold replay됩니다. Report·checklist_explanation은 single-call 경로를 유지합니다.
+
+## 네이밍 컨벤션 (Tools & Skills)
+
+### Tools
+
+| 구분                                | 규칙                                  | 예시                                                         |
+| ----------------------------------- | ------------------------------------- | ------------------------------------------------------------ |
+| Wire name (SDK `defineTool` `name`) | `snake_case` `동사_명사`              | `fetch_disclosures`, `run_risk_analysis`                     |
+| TS const (wire 상수)                | `SCREAMING_SNAKE_CASE` + `_TOOL_NAME` | `FETCH_DISCLOSURES_TOOL_NAME`, `RUN_RISK_ANALYSIS_TOOL_NAME` |
+| TS instance                         | `camelCase` + `Tool`                  | `fetchDisclosuresTool`, `runRiskAnalysisTool`                |
+| TS file                             | `camelCase.ts`                        | `fetchDisclosures.ts`, `runRiskAnalysis.ts`                  |
+| TS execute 함수                     | `execute` + `PascalCase`              | `executeFetchDisclosures`, `executeRunRiskAnalysis`          |
+
+### Skills
+
+| 구분                                                   | 규칙                                                          | 예시                                                               |
+| ------------------------------------------------------ | ------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Wire name (SKILL.md `name` + `.pi/skills/` 디렉토리명) | `kebab-case`, 반드시 `gongsiri-` prefix, `-skill` suffix 금지 | `gongsiri-report`, `gongsiri-qa`, `gongsiri-checklist-explanation` |
+| TS const                                               | `SCREAMING_SNAKE_CASE` + `_SKILL`                             | `GONGSIRI_DISCLOSURE_INTAKE_SKILL`                                 |
+| TS file                                                | `camelCase.ts` (`Skill` suffix 불필요)                        | `disclosureRouter.ts`                                              |
+
+> **중요:** TS 파일명 `*Skill.ts`는 Pi SDK skill 등록 코드 전용으로 예약된다. 결정론적 라우터·디스패처는 `*Skill.ts`로 명명하지 말고 `triggers/` 디렉토리에 둔다.
 
 ## Out of scope
 

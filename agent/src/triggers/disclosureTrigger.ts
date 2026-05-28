@@ -8,8 +8,7 @@ import type {
   ToolResultSuccess,
   TriggeredDisclosureResult,
 } from "../contracts/response.js";
-import type { ToolDefinition } from "../contracts/tool.js";
-import { fetchDisclosuresTool } from "../tools/fetchDisclosures.js";
+import { executeFetchDisclosures } from "../tools/fetchDisclosures.js";
 import {
   LocalDisclosureCheckpointStore,
   resolveCheckpointPath,
@@ -66,18 +65,16 @@ export const createDisclosureTriggerRequest = (
 export const runTriggeredDisclosureCheck = async (
   request: DisclosureTriggerRequest,
   options: {
-    tool?: ToolDefinition;
     checkpointStore?: LocalDisclosureCheckpointStore;
   } = {},
 ): Promise<TriggeredDisclosureResult> => {
-  const tool = options.tool ?? fetchDisclosuresTool;
   const checkpointStore =
     options.checkpointStore ?? new LocalDisclosureCheckpointStore();
   const requestKey = resolveRequestKey(request);
   const fallbackPreviousLastSeen = requestKey
     ? checkpointStore.read(requestKey)
     : null;
-  const result = await tool.invoke(request);
+  const result = await executeFetchDisclosures(request);
 
   if (!result.ok) {
     return buildFailureResult(
