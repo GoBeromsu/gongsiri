@@ -62,15 +62,17 @@ final turn에서는 다음 형식의 JSON만 출력하세요. JSON 앞뒤로 어
 {
   "shortTermMarkdown": "string",
   "longTermMarkdown": "string",
-  "disclaimerMarkdown": "string"
+  "disclaimerMarkdown": "string",
+  "checklist": []
 }
 ```
 
 - `shortTermMarkdown`: 1~3개월 단기 전망 (Markdown)
 - `longTermMarkdown`: 6~12개월 장기 전망 (Markdown)
 - `disclaimerMarkdown`: 반드시 "DART 공시·재무 기반 도메인 시그널만 분석하며, 차트·거래량·뉴스·루머는 포함하지 않습니다. 투자 자문이 아닙니다." 포함 (Markdown)
+- `checklist`: `run_risk_analysis` 툴이 반환한 `checklist` 배열을 그대로 복사. 툴 호출 실패 시 빈 배열 `[]`.
 
-출력 키는 정확히 `shortTermMarkdown`, `longTermMarkdown`, `disclaimerMarkdown` 3개여야 합니다. 다른 이름 사용 금지.
+출력 키는 정확히 `shortTermMarkdown`, `longTermMarkdown`, `disclaimerMarkdown`, `checklist` 4개여야 합니다. 다른 이름 사용 금지.
 
 ## 작전주 6개 항목
 

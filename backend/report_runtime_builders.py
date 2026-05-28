@@ -218,7 +218,7 @@ def save_agent_path_report(
         "corp_name": corp_name,
         "risk_level": safe_risk_level,
         "risk_score": int(guard.get("riskScore") or 0),
-        "checklist": checklist_storage([]),
+        "checklist": checklist_storage(guard.get("checklist") or []),
         "short_term_report": str(
             report.get("shortTermMarkdown") or report.get("shortTermReport") or ""
         ),
